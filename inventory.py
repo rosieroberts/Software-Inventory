@@ -1,5 +1,4 @@
 import pymongo
-import xmltodict
 import requests
 from pprint import pprint
 
@@ -16,9 +15,6 @@ def comp_nums():
     snipe_del = inventory_db['deleted']
 
     comp_list = upd_dbs.upd_bx_hw()
-
-
-def mac_address_format(mac):
 
     not_found = []
     found = []
@@ -80,7 +76,6 @@ def mac_address_format(mac):
     print(len(found_deleted), 'found in deleted')
     print(len(found_deleted_mac), 'found in deleted_mac')
     print(len(not_found), 'not found')
-
 
 
 def api_call():
