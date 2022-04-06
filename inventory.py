@@ -18,6 +18,8 @@ def comp_nums():
     comp_list = upd_dbs.upd_bx_hw()
 
 
+def mac_address_format(mac):
+
     not_found = []
     found = []
     found_deleted = []

@@ -6,7 +6,7 @@ from netaddr import EUI, mac_unix_expanded
 from logging import FileHandler, Formatter, StreamHandler, getLogger, INFO
 from json import decoder
 from datetime import date
-import config as cfg
+from lib import config as cfg
 
 
 logger = getLogger('upd_dbs')
@@ -398,8 +398,6 @@ def mac_address_format(mac):
     formatted_mac = (str(formatted_mac).upper())
 
     return formatted_mac
-
-
 
 
 upd_snipe_hw()
