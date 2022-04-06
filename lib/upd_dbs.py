@@ -400,7 +400,9 @@ def mac_address_format(mac):
     return formatted_mac
 
 
+
+
 upd_snipe_hw()
 upd_snipe_lic()
-#upd_bx_hw()
-#upd_bx_sw()
+upd_bx_hw()
+upd_bx_sw()
