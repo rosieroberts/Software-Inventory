@@ -10,9 +10,9 @@ from lib import config as cfg
 # get all software installed with computer name
 response = cfg.response
 
-
 # get computer name, IP, Mac Address
 hardware_response = cfg.hardware_response
+
 
 def mac_address_format(mac):
     """Return formatted version of mac address
