@@ -376,14 +376,13 @@ def upd_bx_sw():
         print(all_software)
 
         for item in all_software:
-            found_item =soft_col.find_one({'sw':item})
+            found_item = soft_col.find_one({'sw': item})
 
             if not found_item:
                 soft_dict1 = {'sw': item}
                 soft_col.insert_one(soft_dict1)
             else:
                 continue
-
 
         num_entries = mycol.count()
         entries = False

@@ -11,14 +11,14 @@ def match_dbs():
         Snipe HW
         Snipe License
         Big Fix HW
-        Big Fix SW 
+        Big Fix SW
 
         to get snipe license seat information and create a new combined database
         and update snipe-it licenses
 
         db.snipe_hw.findOne({})
 {
-        "_id" : 
+        "_id" :
         "ID" : 12815,
         "Asset Tag" : "",
         "IP" : "",
@@ -50,8 +50,6 @@ def match_dbs():
         "sw" : ""
 
 '''
-
-
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
 
@@ -63,7 +61,7 @@ def match_dbs():
 
     # Snipe HW collection
     snipe_hw = software_db['snipe_hw']
-    
+
     # Snipe Licenses collection
     snipe_lic = software_db['snipe_lic']
 
@@ -79,7 +77,7 @@ def match_dbs():
     for item in comp_list:
         bgfix_item = bigfix_hw.find_one({'comp_name': item['Hostname'],
                                          'IP': item['IP'],
-                                         'mac_addr': item['Mac Address']}, 
+                                         'mac_addr': item['Mac Address']},
                                         {'comp_name': 1, 'IP': 1,
                                          'mac_addr': 1, '_id': 0})
         if bgfix_item:
@@ -90,8 +88,8 @@ def match_dbs():
             bgfix_sw_item = list(bgfix_sw_item)
     print(item)
     print(bgfix_item)
-    print(bgfix_sw_item) 
-   
+    print(bgfix_sw_item)
+
 
 def comp_nums():
     client = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -178,5 +176,5 @@ def api_call():
     print(response.text)
 
 
-#comp_nums()
+# comp_nums()
 match_dbs()
