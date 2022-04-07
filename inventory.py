@@ -6,6 +6,93 @@ from lib import config as cfg
 from lib import upd_dbs
 
 
+def match_dbs():
+    ''' Combine all information from all databases
+        Snipe HW
+        Snipe License
+        Big Fix HW
+        Big Fix SW 
+
+        to get snipe license seat information and create a new combined database
+        and update snipe-it licenses
+
+        db.snipe_hw.findOne({})
+{
+        "_id" : 
+        "ID" : 12815,
+        "Asset Tag" : "",
+        "IP" : "",
+        "Mac Address" : "",
+        "Location" : "",
+        "Hostname" : ""
+}
+> db.snipe_lic.findOne({})
+{
+        "_id" : ,
+        "License ID" : 3,
+        "License Name" : "",
+        "Total Seats" : 10,
+        "Manufacturer" : "",
+        "Manufacturer ID" : ,
+        "Free Seats" : 8
+}
+> db.bigfix_hw.findOne({})
+{
+        "_id" : ,
+        "comp_name" : "",
+        "IP" : "",
+        "mac_addr" : ""
+}
+> db.bigfix_sw.findOne({})
+{
+        "_id" : "),
+        "comp_name" : "",
+        "sw" : ""
+
+'''
+
+
+    client = pymongo.MongoClient("mongodb://localhost:27017/")
+    software_db = client['software_inventory']
+
+    # BigFix HW collection
+    bigfix_hw = software_db['bigfix_hw']
+
+    # BigFix SW collection
+    bigfix_sw = software_db['bigfix_sw']
+
+    # Snipe HW collection
+    snipe_hw = software_db['snipe_hw']
+    
+    # Snipe Licenses collection
+    snipe_lic = software_db['snipe_lic']
+
+    # CREATE Snipe Seats  collection
+    snipe_seats = software_db['snipe_seats']
+
+    # unique software collection
+    soft_col = software_db['all_software']
+
+    # get list of snipe hw devices to look up software for
+    comp_list = upd_dbs.upd_snipe_hw()
+
+    for item in comp_list:
+        bgfix_item = bigfix_hw.find_one({'comp_name': item['Hostname'],
+                                         'IP': item['IP'],
+                                         'mac_addr': item['Mac Address']}, 
+                                        {'comp_name': 1, 'IP': 1,
+                                         'mac_addr': 1, '_id': 0})
+        if bgfix_item:
+
+            # find all with comp_name in bigfix_sw db
+            bgfix_sw_item = bigfix_sw.find({'comp_name': item['Hostname']},
+                                           {'sw': 1, '_id': 0})
+            bgfix_sw_item = list(bgfix_sw_item)
+    print(item)
+    print(bgfix_item)
+    print(bgfix_sw_item) 
+   
+
 def comp_nums():
     client = pymongo.MongoClient("mongodb://localhost:27017/")
 
@@ -91,4 +178,5 @@ def api_call():
     print(response.text)
 
 
-comp_nums()
+#comp_nums()
+match_dbs()
