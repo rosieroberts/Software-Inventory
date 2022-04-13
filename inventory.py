@@ -1,7 +1,7 @@
 import pymongo
 import requests
 from pprint import pprint
-
+import time
 from lib import config as cfg
 from lib import upd_dbs
 
@@ -65,16 +65,19 @@ def match_dbs():
     # Snipe Licenses collection
     snipe_lic = software_db['snipe_lic']
 
-    # CREATE Snipe Seats  collection
-    snipe_seats = software_db['snipe_seats']
+    # Snipe Seats  collection
+    snipe_seats = software_db['snipe_seat']
 
     # unique software collection
     soft_col = software_db['all_software']
 
     # get list of snipe hw devices to look up software for
-    comp_list = upd_dbs.upd_snipe_hw()
+    snipe_list = upd_dbs.upd_snipe_hw()
 
-    for item in comp_list:
+    license_list = snipe_lic.find({},{'License Name': 1, 'License ID': 1, '_id': 0})
+    license_list = list(license_list)
+
+    for item in snipe_list:
         bgfix_item = bigfix_hw.find_one({'comp_name': item['Hostname'],
                                          'IP': item['IP'],
                                          'mac_addr': item['Mac Address']},
@@ -82,13 +85,21 @@ def match_dbs():
                                          'mac_addr': 1, '_id': 0})
         if bgfix_item:
 
-            # find all with comp_name in bigfix_sw db
-            bgfix_sw_item = bigfix_sw.find({'comp_name': item['Hostname']},
-                                           {'sw': 1, '_id': 0})
-            bgfix_sw_item = list(bgfix_sw_item)
+            # find all software with comp_name in bigfix_sw db
+            bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
+                                           {'sw': 1, 'comp_name': 1, '_id': 0})
+            bgfix_sw_list = list(bgfix_sw_list)
+
+    
+            for itm in bgfix_sw_list:
+                software = itm['sw']
+                comp_name = itm['comp_name']
+                license = snipe_lic.find_one({'License Name': software},
+                                             {'License Name': 1, 'License ID': 1})
+
     print(item)
     print(bgfix_item)
-    print(bgfix_sw_item)
+    print(bgfix_sw_list)
 
 
 def comp_nums():
@@ -176,5 +187,61 @@ def api_call():
     print(response.text)
 
 
+
+def create_lic():
+    '''gets total list of unique licenses and adds them to snipe it if not already added'''
+
+    snipe_lic = []
+
+    # url for snipe-it licenses
+    url = cfg.api_url_soft_all
+
+    client = pymongo.MongoClient("mongodb://localhost:27017/")
+    software_db = client['software_inventory']
+
+    # unique software collection
+    soft_col = software_db['all_software']
+    all_software = soft_col.find()
+
+    # license collection
+    lic_col = software_db['snipe_lic']
+    all_licenses = lic_col.find({},{'_id': 0, 'License Name': 1, 'License ID': 1})
+
+    all_software = list(all_software)
+    all_licenses = list(all_licenses)
+
+    for item in all_licenses:
+        snipe_lic.append(item['License Name'])
+
+    for item in all_software:
+
+        print(item['sw'])
+
+        if item['sw'] in snipe_lic:
+            print('FOUND')
+            continue
+
+        else:
+            print('NOT FOUND')
+            item_str = str({'name': item['sw'], 'seats': '999', 'category_id':'11'})
+            payload = item_str.replace('\'', '\"')
+
+            response = requests.request("POST",
+                                        url=url,
+                                        data=payload,
+                                        headers=cfg.api_headers)
+
+            print(response.text)
+
+
+def get_snipe_assets():
+    ''' Using the license name, look for all assets that have that license, and match with snipe it Assets to assign seats.
+        cross reference with big_fix_HW database to make sure it is the right asset.'''
+    pass
+        
+            
+
+
 # comp_nums()
 match_dbs()
+#create_lic()

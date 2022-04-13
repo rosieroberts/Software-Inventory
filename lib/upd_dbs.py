@@ -6,7 +6,9 @@ from netaddr import EUI, mac_unix_expanded
 from logging import FileHandler, Formatter, StreamHandler, getLogger, INFO
 from json import decoder
 from datetime import date
-from lib import config as cfg
+from pprint import pprint
+from time import sleep
+import config as cfg
 
 
 logger = getLogger('upd_dbs')
@@ -60,7 +62,6 @@ def upd_snipe_hw():
         if total_record == 0:
             logger.info('No data in Snipe-IT')
             content = None
-            return content
 
         for offset in range(0, total_record, 500):
             querystring = {"offset": offset}
@@ -132,15 +133,18 @@ def upd_snipe_lic():
 
     try:
         all_items = []
+        seat_list = []
         url = cfg.api_url_soft_all
         response = requests.request("GET", url=url, headers=cfg.api_headers)
         content = response.json()
         total_record = content['total']
+        count = 0
 
         if total_record == 0:
             logger.info('No License data in Snipe-IT')
             content = None
             return content
+
 
         for offset in range(0, total_record, 500):
             querystring = {"offset": offset}
@@ -149,34 +153,76 @@ def upd_snipe_lic():
                                         headers=cfg.api_headers,
                                         params=querystring)
             content = response.json()
+            count += 1
             for item in content['rows']:
+
                 device = {'License ID': item['id'],
                           'License Name': item['name'],
                           'Total Seats': item['seats'],
-                          'Manufacturer': item['manufacturer']['name'],
-                          'Manufacturer ID': item['manufacturer']['id'],
                           'Free Seats': item['free_seats_count']}
                 all_items.append(device)
+                print(item['id'])
+                url2 = cfg.api_url_soft_all_seats.format(item['id'])
+                for offset in range (0, item['seats'], 500):
+                    print(offset)
+                    querystring = {'offset': offset}
+                    response2 = requests.request("GET",
+                                                 url=url2,
+                                                 headers=cfg.api_headers,
+                                                 params=querystring)
+                    content = response2.json()
+                    count += 1
+                    pprint(content)
+                    for item in content['rows']:
+                        if item['assigned_asset'] == None:
+                            assigned_asset = None
+                            location = None
+                        else:
+                            assigned_asset = item['assigned_asset']['id']
+                            location = item['location']['name']
+
+                        seat = {'id': item['id'],
+                                'license_id': item['license_id'],
+                                'assigned_asset': assigned_asset,
+                                'location': location,
+                                'name': item['name']}
+                        #print(seat)
+                        seat_list.append(seat)
+
+                        if count == 110:
+                            sleep(30)
+                            count = 0
 
         #print(*all_items, sep='\n')
+        print('*****')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 
         # use database named "inventory"
-        mydb = myclient['software_inventory']
+        soft_db = myclient['software_inventory']
 
         # use collection named "snipe"
-        mycol = mydb['snipe_lic']
+        snipe_lic_col = soft_db['snipe_lic']
+
+        # use collection for seats
+        snipe_seat_col = soft_db['snipe_seat']
 
         # delete prior scan items
-        if mycol.count() > 0:
-            mycol.delete_many({})
+        if snipe_lic_col.count() > 0:
+            snipe_lic_col.delete_many({})
+
+        if snipe_seat_col.count() > 0:
+            snipe_seat_col.delete_many({})
+
 
         # insert list of dictionaries
-        mycol.insert_many(all_items)
+        snipe_lic_col.insert_many(all_items)
         logger.debug('snipe db licenses updated')
 
-        num_entries = mycol.count()
+        snipe_seat_col.insert_many(seat_list)
+        logger.debug('snipe db seats updated')
+
+        num_entries = snipe_lic_col.count()
         entries = False
 
         if num_entries:
@@ -420,6 +466,6 @@ def mac_address_format(mac):
 
 
 #upd_snipe_hw()
-#upd_snipe_lic()
 #upd_bx_hw()
-upd_bx_sw()
+#upd_bx_sw()
+upd_snipe_lic()
