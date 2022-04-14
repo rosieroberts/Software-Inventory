@@ -2,6 +2,7 @@ import pymongo
 import requests
 from pprint import pprint
 import time
+import traceback
 from lib import config as cfg
 from lib import upd_dbs
 
@@ -72,34 +73,75 @@ def match_dbs():
     soft_col = software_db['all_software']
 
     # get list of snipe hw devices to look up software for
-    snipe_list = upd_dbs.upd_snipe_hw()
+    snipe_list = snipe_hw.find({})
+    snipe_list = list(snipe_list)
 
+    # get license list from mongo 'snipe_lic'
     license_list = snipe_lic.find({},{'License Name': 1, 'License ID': 1, '_id': 0})
     license_list = list(license_list)
 
-    for item in snipe_list:
-        bgfix_item = bigfix_hw.find_one({'comp_name': item['Hostname'],
-                                         'IP': item['IP'],
-                                         'mac_addr': item['Mac Address']},
-                                        {'comp_name': 1, 'IP': 1,
-                                         'mac_addr': 1, '_id': 0})
-        if bgfix_item:
+    try:
 
-            # find all software with comp_name in bigfix_sw db
-            bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
-                                           {'sw': 1, 'comp_name': 1, '_id': 0})
-            bgfix_sw_list = list(bgfix_sw_list)
+        # for each asset in snipe_hw look up in mongodb big_fix_hw
+        for count, item in enumerate(snipe_list):
+            if count <= 6:
+                asset_id = item['ID']
+                location = item['Location']
+                bgfix_item = bigfix_hw.find_one({'comp_name': item['Hostname'],
+                                                 'IP': item['IP'],
+                                                 'mac_addr': item['Mac Address']},
+                                                {'comp_name': 1, 'IP': 1,
+                                                 'mac_addr': 1, '_id': 0})
+            if bgfix_item and count <= 6:
+                # find all software with comp_name in bigfix_sw db
+                bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
+                                               {'sw': 1, 'comp_name': 1, '_id': 0})
+                bgfix_sw_list = list(bgfix_sw_list)
+                pprint(bgfix_sw_list)
 
-    
-            for itm in bgfix_sw_list:
-                software = itm['sw']
-                comp_name = itm['comp_name']
-                license = snipe_lic.find_one({'License Name': software},
-                                             {'License Name': 1, 'License ID': 1})
+                for itm in bgfix_sw_list:
+                    software = itm['sw']
+                    print(software)
+                    comp_name = itm['comp_name']
+                    print(comp_name)
+                    license = snipe_lic.find_one({'License Name': software},
+                                                 {'License Name': 1, 'License ID': 1})
 
-    print(item)
-    print(bgfix_item)
-    print(bgfix_sw_list)
+                    found_seat = snipe_seats.find_one({'assigned_asset': asset_id, 'license_id': license['License ID']},
+                                                      {'id': 1, 'assigned_asset': 1, 'name': 1, 'location': 1, '_id':0})
+
+                    if not found_seat:
+                        seat = snipe_seats.find_one({'assigned_asset': None, 'license_id': license['License ID']},
+                                                    {'id': 1, 'assigned_asset': 1, 'name': 1, 'location': 1, '_id':0})
+
+                        print(count)
+                        print(license)
+                        print(seat)
+                        print(license['License ID'])
+                        # license ID and seat id
+                        url = cfg.api_url_software_seat.format(license['License ID'], seat['id'])
+                        # asset ID
+                        item_str = str({'asset_id': asset_id})
+                        payload = item_str.replace('\'', '\"')
+                        response = requests.request("PATCH",
+                                                    url=url,
+                                                    data=payload,
+                                                    headers=cfg.api_headers)
+                        print(response.text)
+                        content = response.json()
+                        status = str(content['status'])
+                        if status == 'success':
+                            updated_seat = snipe_seats.update_one({'license_id': license['License ID'], 'id': seat['id']},
+                                                                  {'$set': {'assigned_asset': asset_id,
+                                                                            'location': location}})
+
+                            print(updated_seat)
+                    else:
+                        continue 
+
+    except:
+        traceback.print_exc()
+        print('error')
 
 
 def comp_nums():
