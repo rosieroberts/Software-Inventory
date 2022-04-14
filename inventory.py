@@ -1,7 +1,6 @@
 import pymongo
 import requests
 from pprint import pprint
-import time
 import traceback
 from lib import config as cfg
 from lib import upd_dbs
@@ -77,7 +76,7 @@ def match_dbs():
     snipe_list = list(snipe_list)
 
     # get license list from mongo 'snipe_lic'
-    license_list = snipe_lic.find({},{'License Name': 1, 'License ID': 1, '_id': 0})
+    license_list = snipe_lic.find({}, {'License Name': 1, 'License ID': 1, '_id': 0})
     license_list = list(license_list)
 
     try:
@@ -108,11 +107,11 @@ def match_dbs():
                                                  {'License Name': 1, 'License ID': 1})
 
                     found_seat = snipe_seats.find_one({'assigned_asset': asset_id, 'license_id': license['License ID']},
-                                                      {'id': 1, 'assigned_asset': 1, 'name': 1, 'location': 1, '_id':0})
+                                                      {'id': 1, 'assigned_asset': 1, 'name': 1, 'location': 1, '_id': 0})
 
                     if not found_seat:
                         seat = snipe_seats.find_one({'assigned_asset': None, 'license_id': license['License ID']},
-                                                    {'id': 1, 'assigned_asset': 1, 'name': 1, 'location': 1, '_id':0})
+                                                    {'id': 1, 'assigned_asset': 1, 'name': 1, 'location': 1, '_id': 0})
 
                         print(count)
                         print(license)
@@ -137,7 +136,7 @@ def match_dbs():
 
                             print(updated_seat)
                     else:
-                        continue 
+                        continue
 
     except:
         traceback.print_exc()
@@ -229,7 +228,6 @@ def api_call():
     print(response.text)
 
 
-
 def create_lic():
     '''gets total list of unique licenses and adds them to snipe it if not already added'''
 
@@ -247,7 +245,7 @@ def create_lic():
 
     # license collection
     lic_col = software_db['snipe_lic']
-    all_licenses = lic_col.find({},{'_id': 0, 'License Name': 1, 'License ID': 1})
+    all_licenses = lic_col.find({}, {'_id': 0, 'License Name': 1, 'License ID': 1})
 
     all_software = list(all_software)
     all_licenses = list(all_licenses)
@@ -265,7 +263,7 @@ def create_lic():
 
         else:
             print('NOT FOUND')
-            item_str = str({'name': item['sw'], 'seats': '999', 'category_id':'11'})
+            item_str = str({'name': item['sw'], 'seats': '999', 'category_id': '11'})
             payload = item_str.replace('\'', '\"')
 
             response = requests.request("POST",
@@ -280,10 +278,8 @@ def get_snipe_assets():
     ''' Using the license name, look for all assets that have that license, and match with snipe it Assets to assign seats.
         cross reference with big_fix_HW database to make sure it is the right asset.'''
     pass
-        
-            
 
 
 # comp_nums()
 match_dbs()
-#create_lic()
+# create_lic()
