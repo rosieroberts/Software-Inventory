@@ -83,7 +83,7 @@ def upd_snipe_hw():
                 else:
                     continue
 
-        #print(*all_items, sep='\n')
+        # print(*all_items, sep='\n')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 
@@ -100,13 +100,6 @@ def upd_snipe_hw():
         # insert list of dictionaries
         mycol.insert_many(all_items)
         logger.debug('snipe db updated')
-
-        num_entries = mycol.count()
-        entries = False
-
-        if num_entries:
-            entries = True
-            #print(entries)
 
         return all_items
 
@@ -145,7 +138,6 @@ def upd_snipe_lic():
             content = None
             return content
 
-
         for offset in range(0, total_record, 500):
             querystring = {"offset": offset}
             response = requests.request("GET",
@@ -163,7 +155,7 @@ def upd_snipe_lic():
                 all_items.append(device)
                 print(item['id'])
                 url2 = cfg.api_url_soft_all_seats.format(item['id'])
-                for offset in range (0, item['seats'], 500):
+                for offset in range(0, item['seats'], 500):
                     print(offset)
                     querystring = {'offset': offset}
                     response2 = requests.request("GET",
@@ -174,7 +166,7 @@ def upd_snipe_lic():
                     count += 1
                     pprint(content)
                     for item in content['rows']:
-                        if item['assigned_asset'] == None:
+                        if item['assigned_asset'] is None:
                             assigned_asset = None
                             location = None
                         else:
@@ -186,14 +178,14 @@ def upd_snipe_lic():
                                 'assigned_asset': assigned_asset,
                                 'location': location,
                                 'name': item['name']}
-                        #print(seat)
+                        # print(seat)
                         seat_list.append(seat)
 
                         if count == 110:
                             sleep(30)
                             count = 0
 
-        #print(*all_items, sep='\n')
+        # print(*all_items, sep='\n')
         print('*****')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -213,7 +205,6 @@ def upd_snipe_lic():
 
         if snipe_seat_col.count() > 0:
             snipe_seat_col.delete_many({})
-
 
         # insert list of dictionaries
         snipe_lic_col.insert_many(all_items)
@@ -302,7 +293,7 @@ def upd_bx_hw():
 
                 continue
 
-        #print(*comp_list, sep='\n')
+        # print(*comp_list, sep='\n')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 
@@ -319,13 +310,6 @@ def upd_bx_hw():
         # insert list of dictionaries
         mycol.insert_many(comp_list)
         logger.debug('bigfix harware updated')
-
-        num_entries = mycol.count()
-        entries = False
-
-        if num_entries:
-            entries = True
-            #print(entries)
 
         return comp_list
 
@@ -396,7 +380,7 @@ def upd_bx_sw():
 
                 continue
 
-        #print(*soft_list, sep='\n')
+        # print(*soft_list, sep='\n')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 
@@ -430,13 +414,6 @@ def upd_bx_sw():
             else:
                 continue
 
-        num_entries = mycol.count()
-        entries = False
-
-        if num_entries:
-            entries = True
-            #print(entries)
-
         return soft_list
 
     except (KeyError,
@@ -465,7 +442,7 @@ def mac_address_format(mac):
     return formatted_mac
 
 
-#upd_snipe_hw()
-#upd_bx_hw()
-#upd_bx_sw()
-upd_snipe_lic()
+# upd_snipe_hw()
+# upd_bx_hw()
+# upd_bx_sw()
+# upd_snipe_lic()

@@ -69,7 +69,7 @@ def match_dbs():
     snipe_seats = software_db['snipe_seat']
 
     # unique software collection
-    soft_col = software_db['all_software']
+    # soft_col = software_db['all_software']
 
     # get list of snipe hw devices to look up software for
     snipe_list = snipe_hw.find({})
@@ -138,7 +138,7 @@ def match_dbs():
                     else:
                         continue
 
-    except:
+    except:  # figuring this out still
         traceback.print_exc()
         print('error')
 
