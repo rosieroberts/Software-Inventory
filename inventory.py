@@ -75,10 +75,6 @@ def match_dbs():
     snipe_list = snipe_hw.find({})
     snipe_list = list(snipe_list)
 
-    # get license list from mongo 'snipe_lic'
-    license_list = snipe_lic.find({}, {'License Name': 1, 'License ID': 1, '_id': 0})
-    license_list = list(license_list)
-
     try:
 
         # for each asset in snipe_hw look up in mongodb big_fix_hw
