@@ -155,9 +155,9 @@ def upd_snipe_lic():
                 all_items.append(device)
                 print(item['id'])
                 url2 = cfg.api_url_soft_all_seats.format(item['id'])
-                for offset in range(0, item['seats'], 500):
-                    print(offset)
-                    querystring = {'offset': offset}
+                for offset2 in range(0, item['seats'], 500):
+                    print(offset2)
+                    querystring = {'offset': offset2}
                     response2 = requests.request("GET",
                                                  url=url2,
                                                  headers=cfg.api_headers,
@@ -165,19 +165,19 @@ def upd_snipe_lic():
                     content = response2.json()
                     count += 1
                     pprint(content)
-                    for item in content['rows']:
-                        if item['assigned_asset'] is None:
+                    for itm in content['rows']:
+                        if itm['assigned_asset'] is None:
                             assigned_asset = None
                             location = None
                         else:
-                            assigned_asset = item['assigned_asset']['id']
-                            location = item['location']['name']
+                            assigned_asset = itm['assigned_asset']['id']
+                            location = itm['location']['name']
 
-                        seat = {'id': item['id'],
-                                'license_id': item['license_id'],
+                        seat = {'id': itm['id'],
+                                'license_id': itm['license_id'],
                                 'assigned_asset': assigned_asset,
                                 'location': location,
-                                'name': item['name']}
+                                'name': itm['name']}
                         # print(seat)
                         seat_list.append(seat)
 
