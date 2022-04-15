@@ -6,7 +6,9 @@ from netaddr import EUI, mac_unix_expanded
 from logging import FileHandler, Formatter, StreamHandler, getLogger, INFO
 from json import decoder
 from datetime import date
-from lib import config as cfg
+from pprint import pprint
+from time import sleep
+import config as cfg
 
 
 logger = getLogger('upd_dbs')
@@ -60,7 +62,6 @@ def upd_snipe_hw():
         if total_record == 0:
             logger.info('No data in Snipe-IT')
             content = None
-            return content
 
         for offset in range(0, total_record, 500):
             querystring = {"offset": offset}
@@ -82,7 +83,7 @@ def upd_snipe_hw():
                 else:
                     continue
 
-        print(*all_items, sep='\n')
+        # print(*all_items, sep='\n')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 
@@ -100,14 +101,7 @@ def upd_snipe_hw():
         mycol.insert_many(all_items)
         logger.debug('snipe db updated')
 
-        num_entries = mycol.count()
-        entries = False
-
-        if num_entries:
-            entries = True
-            print(entries)
-
-        return (all_items, entries)
+        return all_items
 
     except (KeyError,
             decoder.JSONDecodeError):
@@ -132,10 +126,12 @@ def upd_snipe_lic():
 
     try:
         all_items = []
+        seat_list = []
         url = cfg.api_url_soft_all
         response = requests.request("GET", url=url, headers=cfg.api_headers)
         content = response.json()
         total_record = content['total']
+        count = 0
 
         if total_record == 0:
             logger.info('No License data in Snipe-IT')
@@ -149,41 +145,82 @@ def upd_snipe_lic():
                                         headers=cfg.api_headers,
                                         params=querystring)
             content = response.json()
+            count += 1
             for item in content['rows']:
+
                 device = {'License ID': item['id'],
                           'License Name': item['name'],
                           'Total Seats': item['seats'],
-                          'Manufacturer': item['manufacturer']['name'],
-                          'Manufacturer ID': item['manufacturer']['id'],
                           'Free Seats': item['free_seats_count']}
                 all_items.append(device)
+                print(item['id'])
+                url2 = cfg.api_url_soft_all_seats.format(item['id'])
+                for offset2 in range(0, item['seats'], 500):
+                    print(offset2)
+                    querystring = {'offset': offset2}
+                    response2 = requests.request("GET",
+                                                 url=url2,
+                                                 headers=cfg.api_headers,
+                                                 params=querystring)
+                    content = response2.json()
+                    count += 1
+                    pprint(content)
+                    for itm in content['rows']:
+                        if itm['assigned_asset'] is None:
+                            assigned_asset = None
+                            location = None
+                        else:
+                            assigned_asset = itm['assigned_asset']['id']
+                            location = itm['location']['name']
 
-        print(*all_items, sep='\n')
+                        seat = {'id': itm['id'],
+                                'license_id': itm['license_id'],
+                                'assigned_asset': assigned_asset,
+                                'location': location,
+                                'name': itm['name']}
+                        # print(seat)
+                        seat_list.append(seat)
+
+                        if count == 110:
+                            sleep(30)
+                            count = 0
+
+        # print(*all_items, sep='\n')
+        print('*****')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 
         # use database named "inventory"
-        mydb = myclient['software_inventory']
+        soft_db = myclient['software_inventory']
 
         # use collection named "snipe"
-        mycol = mydb['snipe_lic']
+        snipe_lic_col = soft_db['snipe_lic']
+
+        # use collection for seats
+        snipe_seat_col = soft_db['snipe_seat']
 
         # delete prior scan items
-        if mycol.count() > 0:
-            mycol.delete_many({})
+        if snipe_lic_col.count() > 0:
+            snipe_lic_col.delete_many({})
+
+        if snipe_seat_col.count() > 0:
+            snipe_seat_col.delete_many({})
 
         # insert list of dictionaries
-        mycol.insert_many(all_items)
+        snipe_lic_col.insert_many(all_items)
         logger.debug('snipe db licenses updated')
 
-        num_entries = mycol.count()
+        snipe_seat_col.insert_many(seat_list)
+        logger.debug('snipe db seats updated')
+
+        num_entries = snipe_lic_col.count()
         entries = False
 
         if num_entries:
             entries = True
             print(entries)
 
-        return (all_items, entries)
+        return all_items
 
     except (KeyError,
             decoder.JSONDecodeError):
@@ -256,7 +293,7 @@ def upd_bx_hw():
 
                 continue
 
-        print(*comp_list, sep='\n')
+        # print(*comp_list, sep='\n')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 
@@ -274,14 +311,7 @@ def upd_bx_hw():
         mycol.insert_many(comp_list)
         logger.debug('bigfix harware updated')
 
-        num_entries = mycol.count()
-        entries = False
-
-        if num_entries:
-            entries = True
-            print(entries)
-
-        return (comp_list, entries)
+        return comp_list
 
     except (KeyError,
             decoder.JSONDecodeError):
@@ -317,6 +347,7 @@ def upd_bx_sw():
         tests = loads(tests)
 
         soft_list = []
+        all_software = []
 
         # get software name, computer name
         answer = tests['BESAPI']['Query']['Result']['Tuple']
@@ -334,6 +365,8 @@ def upd_bx_sw():
                              'sw': answer1_2}
                 soft_list.append(soft_dict)
 
+                all_software.append(answer1_2)
+
             # if there was a value missing, add None
             except (KeyError):
                 soft_dict = {'comp_name': answer1,
@@ -347,15 +380,18 @@ def upd_bx_sw():
 
                 continue
 
-        print(*soft_list, sep='\n')
+        # print(*soft_list, sep='\n')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 
-        # use database named "inventory"
-        mydb = myclient['software_inventory']
+        # use database named software_inventory"
+        software_db = myclient['software_inventory']
+
+        # unique software collection
+        soft_col = software_db['all_software']
 
         # use collection named "snipe"
-        mycol = mydb['bigfix_sw']
+        mycol = software_db['bigfix_sw']
 
         # delete prior scan items
         if mycol.count() > 0:
@@ -365,14 +401,20 @@ def upd_bx_sw():
         mycol.insert_many(soft_list)
         logger.debug('bigfix software updated')
 
-        num_entries = mycol.count()
-        entries = False
+        # get unique list of software in all devices
+        all_software = set(all_software)
+        print(all_software)
 
-        if num_entries:
-            entries = True
-            print(entries)
+        for item in all_software:
+            found_item = soft_col.find_one({'sw': item})
 
-        return (soft_list, entries)
+            if not found_item:
+                soft_dict1 = {'sw': item}
+                soft_col.insert_one(soft_dict1)
+            else:
+                continue
+
+        return soft_list
 
     except (KeyError,
             decoder.JSONDecodeError):
@@ -400,7 +442,7 @@ def mac_address_format(mac):
     return formatted_mac
 
 
-upd_snipe_hw()
-upd_snipe_lic()
-upd_bx_hw()
-upd_bx_sw()
+# upd_snipe_hw()
+# upd_bx_hw()
+# upd_bx_sw()
+# upd_snipe_lic()
