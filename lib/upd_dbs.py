@@ -211,9 +211,6 @@ def upd_snipe_lic():
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 
-        # use database named "inventory"
-        soft_db = myclient['software_inventory']
-
         # delete prior scan items
         if snipe_lic_col.count() > 0:
             snipe_lic_col.delete_many({})
