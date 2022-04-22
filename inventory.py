@@ -79,12 +79,10 @@ def match_dbs():
     snipe_list = list(snipe_list)
     licenses_to_remove = []
 
-
     try:
         # for each asset in snipe_hw look up in mongodb big_fix_hw
         for count, item in enumerate(snipe_list):
             asset_id = item['ID']
-            location = item['Location']
             bgfix_item = bigfix_hw.find_one({'comp_name': item['Hostname'],
                                              'IP': item['IP'],
                                              'mac_addr': item['Mac Address']},
@@ -93,8 +91,8 @@ def match_dbs():
 
             # figure out what to do when item is not found in the hardware list, only in software list
             # if not bgfix_item:
-              #   bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
-              #                                  {'sw': 1, 'comp_name': 1, '_id': 0})
+            #   bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
+            #                                  {'sw': 1, 'comp_name': 1, '_id': 0})
 
             if bgfix_item and count <= 6:
                 # find all software with comp_name in bigfix_sw db
@@ -129,39 +127,37 @@ def match_dbs():
                 pprint(bgfix_sw_list)
                 # pprint(snipe_sw_list)
 
-
                 for itm in bgfix_sw_list:
                     software = itm['sw']
-                    comp_name = itm['comp_name']
                     license = snipe_lic.find_one({'License Name': software},
                                                  {'License Name': 1, 'License ID': 1, 'Total Seats': 1, 'Free Seats': 1, '_id': 0})
                     if license:
-                        print('license ID ',license['License ID'])
+                        print('license ID ', license['License ID'])
                         found_seat = snipe_seats.find_one({'assigned_asset': asset_id, 'license_id': license['License ID']},
                                                           {'id': 1, 'assigned_asset': 1, 'name': 1, 'location': 1, '_id': 0})
                         if found_seat is None:
                             if int(license['Free Seats']) >= 1:
-                                seat = snipe_seats.find_one({'assigned_asset': None, 'license_id': license['License ID']},
-                                                            {'id': 1, 'assigned_asset': 1, 'name': 1, 'location': 1, '_id': 0})
+                                # seat = snipe_seats.find_one({'assigned_asset': None, 'license_id': license['License ID']},
+                                #                           {'id': 1, 'assigned_asset': 1, 'name': 1, 'location': 1, '_id': 0})
                                 # license ID and seat id
-                                url = cfg.api_url_software_seat.format(license['License ID'], seat['id'])
+                                # url = cfg.api_url_software_seat.format(license['License ID'], seat['id'])
                                 # asset ID
-                                item_str = str({'asset_id': asset_id})
-                                payload = item_str.replace('\'', '\"')
+                                # item_str = str({'asset_id': asset_id})
+                                # payload = item_str.replace('\'', '\"')
                                 print('PATCH REQUEST check out seat')
-                                #response = requests.request("PATCH",
-                                 #                           url=url,
-                                 #                           data=payload,
-                                  #                          headers=cfg.api_headers)
-                                #print(response.text)
-                                #content = response.json()
-                                #status = str(content['status'])
-                                #if status == 'success':
+                                # response = requests.request("PATCH",
+                                #                             url=url,
+                                #                             data=payload,
+                                #                             headers=cfg.api_headers)
+                                # print(response.text)
+                                # content = response.json()
+                                # status = str(content['status'])
+                                # if status == 'success':
                                 #    updated_seat = snipe_seats.update_one({'license_id': license['License ID'], 'id': seat['id']},
-                                 #                                         {'$set': {'assigned_asset': asset_id,
-                                  #                                                  'location': location}})
+                                #                                          {'$set': {'assigned_asset': asset_id,
+                                #                                                    'location': location}})
 
-                                   # print(updated_seat)
+                                # print(updated_seat)
                             else:
                                 print('There are no seats available for license id {} '.format(license['License ID']))
                                 continue
@@ -170,7 +166,6 @@ def match_dbs():
                             continue
                     else:
                         continue
-
 
     except:  # figuring this out still
         traceback.print_exc()
@@ -204,7 +199,7 @@ def comp_nums():
     bigfix_fmac = []
     found_host = []
     found_host_sw = []
-    #amount of assets in bigfix doubnd in snipe
+    # amount of assets in bigfix doubnd in snipe
     for item in comp_list:
         snipe_hw_ip = snipe_hw_col.find({'IP': item['IP'], 'Mac Address': item['mac_addr']},
                                         {'IP': 1, 'Mac Address': 1, '_id': 0})
@@ -238,8 +233,7 @@ def comp_nums():
                     else:
                         not_found.append(item)
 
-    
-    # amount of assets from snipe found in bigfix hw 
+    # amount of assets from snipe found in bigfix hw
     for item2 in snipe_list:
         bigfix_hw_ip = bigfix_hw_col.find({'IP': item2['IP'], 'mac_addr': item2['Mac Address']},
                                           {'IP': 1, 'mac_addr': 1, '_id': 0})
@@ -276,20 +270,20 @@ def comp_nums():
                     else:
                         not_found2.append(item2)
 
-    #print('FOUND DIFF IP BIGFIX')
-    #pprint(found_mac)
-    #print('______________________________________________________')
-    #print('FOUND DIFF IP SNIPE')
-    #pprint(snipe_fmac)
-    #print('______________________________________________________')
-    #print('FOUND DIFF IP DELETED BIGFIX')
-    #pprint(found_deleted_mac)
-    #print('______________________________________________________')
-    #print('FOUND DIFF IP DELETED SNIPE')
-    #pprint(found_del_snipe_mac)
-    #print('______________________________________________________')
-    #print('NOT FOUND')
-    #pprint(not_found)
+    # print('FOUND DIFF IP BIGFIX')
+    # pprint(found_mac)
+    # print('______________________________________________________')
+    # print('FOUND DIFF IP SNIPE')
+    # pprint(snipe_fmac)
+    # print('______________________________________________________')
+    # print('FOUND DIFF IP DELETED BIGFIX')
+    # pprint(found_deleted_mac)
+    # print('______________________________________________________')
+    # print('FOUND DIFF IP DELETED SNIPE')
+    # pprint(found_del_snipe_mac)
+    # print('______________________________________________________')
+    # print('NOT FOUND')
+    # pprint(not_found)
     print('______________________________________________________')
     print('HOST FOUND')
     pprint(found_host_sw)
@@ -301,8 +295,8 @@ def comp_nums():
     print(len(found_mac2), 'found with diff ip in bigfix')
     print(len(found_host), 'found only computer name in bigfix hw')
     print(len(found_host_sw), 'found only computer name in bigfix sw')
-    #print(len(found_deleted), 'found in deleted')
-    #print(len(found_deleted_mac), 'found in deleted_mac')
+    # print(len(found_deleted), 'found in deleted')
+    # print(len(found_deleted_mac), 'found in deleted_mac')
     print(len(not_found2), 'not found')
 
 
@@ -376,7 +370,7 @@ def create_lic():
                 continue
 
             else:
-                url= cfg.api_url_software_lic.format(license['License ID'])
+                url = cfg.api_url_software_lic.format(license['License ID'])
                 seat_amt = int(item['count']) + 10
                 item_str = str({'seats': seat_amt})
                 payload = item_str.replace('\'', '\"')
@@ -394,7 +388,7 @@ def create_lic():
                                        {'$set': {'Total Seats': seat_amt}})
 
 
-#comp_nums()
+# comp_nums()
 match_dbs()
-#create_lic()
-#api_call()
+# create_lic()
+# api_call()

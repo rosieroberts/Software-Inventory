@@ -6,7 +6,7 @@ from netaddr import EUI, mac_unix_expanded
 from logging import FileHandler, Formatter, StreamHandler, getLogger, INFO
 from json import decoder
 from datetime import date
-from pprint import pprint
+# from pprint import pprint
 from time import sleep
 from lib import config as cfg
 
@@ -189,8 +189,7 @@ def upd_snipe_lic():
                             assigned_asset = itm['assigned_asset']['id']
                             location = itm['location']['name']
                             asset = hardware_col.find_one({'ID': assigned_asset},
-                                                          {'Hostname':1, '_id': 0})
-
+                                                          {'Hostname': 1, '_id': 0})
                             if asset:
                                 hostname = asset['Hostname']
 
@@ -266,13 +265,13 @@ def upd_bx_hw():
 
     try:
         # get computer name, IP, Mac Address
-        #hardware_response = cfg.hardware_response
+        # hardware_response = cfg.hardware_response
 
-        #hard_response = hardware_response.text
+        # hard_response = hardware_response.text
 
         # Adding response to file (waiting on bigfix problem to get fixed due to it having errors)
-        #with open('hardware.txt', 'w') as f:
-         #   f.write(hard_response)
+        # with open('hardware.txt', 'w') as f:
+        #   f.write(hard_response)
 
         file_ = open('hardware.txt', 'rb')
         testh = dumps(xmltodict.parse(file_))
@@ -356,13 +355,13 @@ def upd_bx_sw():
 
     try:
         # get computer name, IP, Mac Address
-        #software_response = cfg.response
+        # software_response = cfg.response
 
-        #soft_response = software_response.text
+        # soft_response = software_response.text
 
-        # Adding response to file 
-        #with open('software.txt', 'w') as f:
-            #f.write(soft_response)
+        # Adding response to file
+        # with open('software.txt', 'w') as f:
+        #     f.write(soft_response)
         file_ = open('software.txt', 'rb')
         tests = dumps(xmltodict.parse(file_))
         tests = loads(tests)
@@ -374,7 +373,7 @@ def upd_bx_sw():
         # get software name, computer name
         answer = tests['BESAPI']['Query']['Result']['Tuple']
         for count, item in enumerate(answer):
-            
+
             try:
                 # initializing fresh answers to prevent duplicates
                 answer1 = None
@@ -430,7 +429,6 @@ def upd_bx_sw():
 
         soft_count = {i: all_software.count(i) for i in all_software}
 
-
         soft_count_list = []
         for sftw, count in soft_count.items():
             soft_count_itm = {'sw': sftw,
@@ -451,8 +449,7 @@ def upd_bx_sw():
 
         if software.count() > 0:
             software.delete_many({})
-        software.insert_many(soft_count_list)        
-             
+        software.insert_many(soft_count_list)
 
         return soft_list
 
@@ -482,7 +479,7 @@ def mac_address_format(mac):
     return formatted_mac
 
 
-#upd_snipe_hw()
-#upd_bx_hw()
-#upd_bx_sw()
-#upd_snipe_lic()
+# upd_snipe_hw()
+# upd_bx_hw()
+# upd_bx_sw()
+# upd_snipe_lic()
