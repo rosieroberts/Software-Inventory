@@ -325,8 +325,8 @@ def create_lic():
     software_db = client['software_inventory']
 
     # all-time unique software collection (may no longer need this)
-    soft_col = software_db['all_software']
-    all_software = soft_col.find()
+    # soft_col = software_db['all_software']
+    # all_software = soft_col.find()
 
     # current software from bigfix with seat amounts ('sw', 'count') collection
     software_col = software_db['software']
