@@ -336,7 +336,7 @@ def create_lic():
     lic_col = software_db['snipe_lic']
     all_licenses = lic_col.find()
 
-    all_software = list(all_software)
+    # all_software = list(all_software)
     software = list(software)
     all_licenses = list(all_licenses)
 

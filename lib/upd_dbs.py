@@ -214,12 +214,6 @@ def upd_snipe_lic():
         # use database named "inventory"
         soft_db = myclient['software_inventory']
 
-        # use collection named "snipe"
-        snipe_lic_col = soft_db['snipe_lic']
-
-        # use collection for seats
-        snipe_seat_col = soft_db['snipe_seat']
-
         # delete prior scan items
         if snipe_lic_col.count() > 0:
             snipe_lic_col.delete_many({})
