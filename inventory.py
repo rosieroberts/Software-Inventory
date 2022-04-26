@@ -136,19 +136,21 @@ def match_dbs():
                         content = response.json()
                         status = str(content['status'])
                         if status == 'success':
-                            updated_seat = snipe_seats.update_one({'license_id': i['license_id'], 'id': i['id']},
-                                                                  {'$set': {'assigned_asset': None,
-                                                                            'location': None}})
+                            snipe_seats.update_one({'license_id': i['license_id'], 'id': i['id']},
+                                                   {'$set': {'assigned_asset': None,
+                                                             'location': None}})
 
-                        lic = snipe_lic.find_one({'license ID': i['license_id']})
+                            lic = snipe_lic.find_one({'license ID': i['license_id']})
 
-                        updated_lic = snipe_lic.update_one({'license ID': i['license_id']},
-                                                           {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
+                            snipe_lic.update_one({'license ID': i['license_id']},
+                                                 {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
 
-                        # updated instance of lic with updated free seat numbers if it was updated
-                        lic = snipe_lic.find_one({'License ID': i['license_id']},
-                                                 {'License Name': 1, 'License ID': 1, 'Total Seats': 1, 'Free Seats': 1, '_id': 0})
-                        print(lic)
+                            # updated instance of lic with updated free seat numbers if it was updated
+                            lic = snipe_lic.find_one({'License ID': i['license_id']},
+                                                     {'License Name': 1, 'License ID': 1, 'Total Seats': 1, 'Free Seats': 1, '_id': 0})
+                            seat = snipe_seats.find_one({'license_id': i['license_id'], 'id': i['id']})
+                            print(lic)
+                            print(seat)
 
                 # get list of license names in snipe
                 sp_sw_list = [ln['license_name'] for ln in snipe_sw_list]
@@ -216,8 +218,8 @@ def match_dbs():
 
                 # if there are licenses no longer showing up in bigfix, remove license from snipe-it
                 if not_in_bigfix_sw:
-                    for item in not_in_bigfix_sw:
-                        lic = snipe_lic.find_one({'License Name': item},
+                    for sft in not_in_bigfix_sw:
+                        lic = snipe_lic.find_one({'License Name': sft},
                                                  {'License Name': 1, 'License ID': 1, 'Total Seats': 1, 'Free Seats': 1, '_id': 0})
 
                         # if there are licenses checked out to assets, check them in to allow deletion of license
@@ -229,7 +231,7 @@ def match_dbs():
                             if out_seats:
                                 for seat in out_seats:
                                     # check in seats by sending a '' string for the asset_id field
-                                    url = cfg.api_url_software_seat.format(out_seats['license_id'], out_seats['id'])
+                                    url = cfg.api_url_software_seat.format(seat['license_id'], seat['id'])
                                     item_str = str({'asset_id': ''})
                                     payload = item_str.replace('\'', '\"')
 
@@ -241,17 +243,17 @@ def match_dbs():
                                     content = response.json()
                                     status = str(content['status'])
                                     if status == 'success':
-                                        updated_seat = snipe_seats.update_one({'license_id': out_seats['License ID'], 'id': out_seats['id']},
+                                        updated_seat = snipe_seats.update_one({'license_id': seat['License ID'], 'id': seat['id']},
                                                                               {'$set': {'assigned_asset': None,
                                                                                         'location': None}})
 
-                                        updated_lic = snipe_lic.update_one({'license ID': out_seats['License ID']},
+                                        updated_lic = snipe_lic.update_one({'license ID': seat['License ID']},
                                                                            {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
                                         print(updated_lic)
                                         print(updated_seat)
 
                                 # updated instance of lic with updated free seat numbers if it was updated
-                                lic = snipe_lic.find_one({'License Name': item},
+                                lic = snipe_lic.find_one({'License Name': sft},
                                                          {'License Name': 1, 'License ID': 1, 'Total Seats': 1, 'Free Seats': 1, '_id': 0})
 
                         # check if license has any seat checked out and if not, delete license
