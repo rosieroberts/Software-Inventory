@@ -6,10 +6,9 @@ from netaddr import EUI, mac_unix_expanded
 from logging import FileHandler, Formatter, StreamHandler, getLogger, INFO
 from json import decoder
 from datetime import date
-from pprint import pprint
+# from pprint import pprint
 from time import sleep
-import config as cfg
-
+from lib import config as cfg
 
 logger = getLogger('upd_dbs')
 # TODO: set to ERROR later on after setup
@@ -124,6 +123,23 @@ def upd_snipe_lic():
 
     """
 
+    myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+
+    # use database named "software_inventory"
+    soft_db = myclient['software_inventory']
+
+    # use database named "inventory"
+    hard_db = myclient['inventory']
+
+    # use collection named "snipe"
+    snipe_lic_col = soft_db['snipe_lic']
+
+    # use collection for seats
+    snipe_seat_col = soft_db['snipe_seat']
+
+    # use collection for hardware
+    hardware_col = hard_db['snipe']
+
     try:
         all_items = []
         seat_list = []
@@ -153,32 +169,38 @@ def upd_snipe_lic():
                           'Total Seats': item['seats'],
                           'Free Seats': item['free_seats_count']}
                 all_items.append(device)
-                print(item['id'])
+
                 url2 = cfg.api_url_soft_all_seats.format(item['id'])
                 for offset2 in range(0, item['seats'], 500):
-                    print(offset2)
                     querystring = {'offset': offset2}
+                    # get seat information from snipe-it and add to mongodb
                     response2 = requests.request("GET",
                                                  url=url2,
                                                  headers=cfg.api_headers,
                                                  params=querystring)
                     content = response2.json()
                     count += 1
-                    pprint(content)
                     for itm in content['rows']:
                         if itm['assigned_asset'] is None:
                             assigned_asset = None
                             location = None
+                            hostname = None
                         else:
                             assigned_asset = itm['assigned_asset']['id']
                             location = itm['location']['name']
+                            asset = hardware_col.find_one({'ID': assigned_asset},
+                                                          {'Hostname': 1, '_id': 0})
+                            if asset:
+                                hostname = asset['Hostname']
 
                         seat = {'id': itm['id'],
                                 'license_id': itm['license_id'],
                                 'assigned_asset': assigned_asset,
                                 'location': location,
-                                'name': itm['name']}
-                        # print(seat)
+                                'seat_name': itm['name'],
+                                'asset_name': hostname,
+                                'license_name': item['name']}
+
                         seat_list.append(seat)
 
                         if count == 110:
@@ -186,18 +208,8 @@ def upd_snipe_lic():
                             count = 0
 
         # print(*all_items, sep='\n')
-        print('*****')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-
-        # use database named "inventory"
-        soft_db = myclient['software_inventory']
-
-        # use collection named "snipe"
-        snipe_lic_col = soft_db['snipe_lic']
-
-        # use collection for seats
-        snipe_seat_col = soft_db['snipe_seat']
 
         # delete prior scan items
         if snipe_lic_col.count() > 0:
@@ -244,13 +256,13 @@ def upd_bx_hw():
 
     try:
         # get computer name, IP, Mac Address
-        hardware_response = cfg.hardware_response
+        # hardware_response = cfg.hardware_response
 
-        hard_response = hardware_response.text
+        # hard_response = hardware_response.text
 
         # Adding response to file (waiting on bigfix problem to get fixed due to it having errors)
-        with open('hardware.txt', 'w') as f:
-            f.write(hard_response)
+        # with open('hardware.txt', 'w') as f:
+        #   f.write(hard_response)
 
         file_ = open('hardware.txt', 'rb')
         testh = dumps(xmltodict.parse(file_))
@@ -334,24 +346,25 @@ def upd_bx_sw():
 
     try:
         # get computer name, IP, Mac Address
-        software_response = cfg.response
+        # software_response = cfg.response
 
-        soft_response = software_response.text
+        # soft_response = software_response.text
 
-        # Adding response to file (waiting on bigfix problem to get fixed due to it having errors)
-        with open('software.txt', 'w') as f:
-            f.write(soft_response)
-
+        # Adding response to file
+        # with open('software.txt', 'w') as f:
+        #     f.write(soft_response)
         file_ = open('software.txt', 'rb')
         tests = dumps(xmltodict.parse(file_))
         tests = loads(tests)
 
         soft_list = []
+        # list of all lines of software names in bigfix
         all_software = []
 
         # get software name, computer name
         answer = tests['BESAPI']['Query']['Result']['Tuple']
         for count, item in enumerate(answer):
+
             try:
                 # initializing fresh answers to prevent duplicates
                 answer1 = None
@@ -379,7 +392,6 @@ def upd_bx_sw():
                 soft_list.append(soft_dict)
 
                 continue
-
         # print(*soft_list, sep='\n')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -389,6 +401,9 @@ def upd_bx_sw():
 
         # unique software collection
         soft_col = software_db['all_software']
+
+        # testing another software collection
+        software = software_db['software']
 
         # use collection named "snipe"
         mycol = software_db['bigfix_sw']
@@ -401,9 +416,18 @@ def upd_bx_sw():
         mycol.insert_many(soft_list)
         logger.debug('bigfix software updated')
 
-        # get unique list of software in all devices
+        # get amount of seats(instances) for each license(software)
+
+        soft_count = {i: all_software.count(i) for i in all_software}
+
+        soft_count_list = []
+        for sftw, count in soft_count.items():
+            soft_count_itm = {'sw': sftw,
+                              'count': count}
+            soft_count_list.append(soft_count_itm)
+
+        # get unique list of software in all devices (all time)
         all_software = set(all_software)
-        print(all_software)
 
         for item in all_software:
             found_item = soft_col.find_one({'sw': item})
@@ -413,6 +437,10 @@ def upd_bx_sw():
                 soft_col.insert_one(soft_dict1)
             else:
                 continue
+
+        if software.count() > 0:
+            software.delete_many({})
+        software.insert_many(soft_count_list)
 
         return soft_list
 
