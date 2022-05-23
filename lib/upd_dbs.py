@@ -6,7 +6,7 @@ from netaddr import EUI, mac_unix_expanded
 from logging import FileHandler, Formatter, StreamHandler, getLogger, INFO
 from json import decoder
 from datetime import date
-from pprint import pprint
+# from pprint import pprint
 from time import sleep
 from lib import config as cfg
 # import config as cfg
@@ -100,7 +100,7 @@ def upd_snipe_hw():
         # insert list of dictionaries
         mycol.insert_many(all_items)
         logger.debug('snipe db updated')
-        
+
         return all_items
 
     except (KeyError,
@@ -158,9 +158,9 @@ def upd_snipe_lic():
         for offset in range(0, total_record, 500):
             querystring = {"offset": offset}
             response2 = requests.request("GET",
-                                        url=url,
-                                        headers=cfg.api_headers,
-                                        params=querystring)
+                                         url=url,
+                                         headers=cfg.api_headers,
+                                         params=querystring)
             content2 = response2.json()
             count += 1
             for item in content2['rows']:
@@ -184,9 +184,9 @@ def upd_snipe_lic():
                     content3 = response3.json()
                     count += 1
                     if count == 90:
-                            sleep(60)
-                            count = 0
-                    
+                        sleep(60)
+                        count = 0
+
                     for itm in content3['rows']:
                         ct += 1
                         if itm['assigned_asset'] is None:
@@ -211,26 +211,22 @@ def upd_snipe_lic():
 
                         seat_list.append(seat)
 
-                        #if itm['license_id'] == 159:
-                            #print(device)
-                            #print(seat)
-
                     print('LICENSE ', item['id'], 'seat count', ct)
                 if snipe_seat_col.count() > 0:
                     snipe_seat_col.delete_many({'license_id': item['id']})
                 deleted_test = snipe_seat_col.find_one({'license_id': item['id']})
                 print('is mongo deleted?')
-                print(deleted_test is None) 
+                print(deleted_test is None)
 
                 times = 0
                 for i in range(0, len(seat_list), 1000):
                     print('LICENSE ', item['id'], '********')
                     print('count', times, 'i', i)
 
-                    #pprint(seat_list[i:i + 1000])
+                    # pprint(seat_list[i:i + 1000])
 
                     times += 1
-                    #print(i)
+                    # print(i)
                     snipe_seat_col.insert_many(seat_list[i:i + 1000])
 
                 logger.debug('snipe db seats updated')
@@ -247,14 +243,6 @@ def upd_snipe_lic():
             logger.debug('snipe db licenses updated')
 
         # print(*all_items, sep='\n')
-
-
-        num_entries = snipe_lic_col.count()
-        entries = False
-
-        if num_entries:
-            entries = True
-            # print(entries)
 
         return all_items
 
@@ -494,7 +482,7 @@ def mac_address_format(mac):
     return formatted_mac
 
 
-#upd_snipe_hw()
+# upd_snipe_hw()
 # upd_bx_hw()
 # upd_bx_sw()
-#upd_snipe_lic()
+# upd_snipe_lic()
