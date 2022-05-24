@@ -6,8 +6,31 @@ import requests
 from pprint import pprint
 import traceback
 from time import time, sleep
+from datetime import date
+from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from lib import config as cfg
 from lib import upd_dbs
+
+logger = getLogger('inventory')
+# TODO: set to ERROR later on after setup
+logger.setLevel(DEBUG)
+
+file_formatter = Formatter('{asctime} {name} {levelname}: {message}', style='{')
+stream_formatter = Formatter('{message}', style='{')
+today = date.today()
+
+# logfile
+file_handler = FileHandler('/opt/Software-Inventory/logs/software_inventory{}.log'
+                           .format(today.strftime('%m%d%Y')))
+file_handler.setLevel(DEBUG)
+file_handler.setFormatter(file_formatter)
+
+# console
+stream_handler = StreamHandler()
+stream_handler.setFormatter(stream_formatter)
+
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
 
 
 def match_dbs():
@@ -102,7 +125,7 @@ def match_dbs():
             #   bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
             #                                  {'sw': 1, 'comp_name': 1, '_id': 0})
 
-            if bgfix_item and 1000 <= count <= 1500:
+            if bgfix_item and 1500 <= count <= 2000:
                 print(item['Asset Tag'])
                 # find all software with comp_name in bigfix_sw db
                 bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
@@ -164,6 +187,7 @@ def match_dbs():
                             print(snipe_lic.find_one({'License ID': i['license_id']}))
 
                             print(snipe_seats.find_one({'license_id': i['license_id'], 'id': i['id']}))
+                            logger.debug('Removed license {} from asset id {}'.format(i['license_id'], asset_id))
 
                 # get list of license names in snipe
                 sp_sw_list = [ln['license_name'] for ln in snipe_sw_list]
@@ -231,6 +255,7 @@ def match_dbs():
                                                          {'$set': {'Free Seats': free_seats}})
                                     print('UPDATED FREE SEATS 2')
                                     print(snipe_lic.find_one({'License ID': license['License ID']}))
+                                    logger.debug('added license {} to asset id {}'.format(license['License ID'], asset_id))
 
                             else:
                                 print('There are no seats available for license id {} '.format(license['License ID']))
@@ -285,6 +310,7 @@ def match_dbs():
 
                                         snipe_lic.update_one({'License ID': seat['License ID']},
                                                              {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
+                                        logger.debug('Removed license {} from asset id {}'.format(lic['Licence ID'], seat['assigned_asset']))
 
                                 # updated instance of lic with updated free seat numbers if it was updated
                                 print('UPDATED FREE SEATS 3')
@@ -311,6 +337,7 @@ def match_dbs():
                                 snipe_lic.delete_one({'License ID': lic['License ID']})
                                 print('None if DELETED LIC FROM MONGO')
                                 print(snipe_lic.find_one({'License ID': lic['License ID']}))
+                                logger.debug('Removed license {} from snipe-it'.format(lic['Licence ID']))
 
         print(len(snipe_list))
         end = time()
