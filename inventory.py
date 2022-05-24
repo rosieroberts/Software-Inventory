@@ -102,7 +102,7 @@ def match_dbs():
             #   bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
             #                                  {'sw': 1, 'comp_name': 1, '_id': 0})
 
-            if bgfix_item and 900 <= count <= 1000:
+            if bgfix_item and 1000 <= count <= 1500:
                 print(item['Asset Tag'])
                 # find all software with comp_name in bigfix_sw db
                 bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
@@ -146,7 +146,7 @@ def match_dbs():
                         content = response.json()
                         ct += 1
                         status = str(content['status'])
-                        status = ' '
+
                         if status == 'success':
                             print('updating mongo remove 1')
                             snipe_seats.update_one({'license_id': i['license_id'], 'id': i['id']},
@@ -159,10 +159,11 @@ def match_dbs():
                             snipe_lic.update_one({'License ID': i['license_id']},
                                                  {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
 
+                            print('UPDATED FREE SEATS 1')
                             # updated instance of lic with updated free seat numbers if it was updated
-                            lic = snipe_lic.find_one({'License ID': i['license_id']},
-                                                     {'License Name': 1, 'License ID': 1, 'Total Seats': 1, 'Free Seats': 1, '_id': 0})
-                            seat = snipe_seats.find_one({'license_id': i['license_id'], 'id': i['id']})
+                            print(snipe_lic.find_one({'License ID': i['license_id']}))
+
+                            print(snipe_seats.find_one({'license_id': i['license_id'], 'id': i['id']}))
 
                 # get list of license names in snipe
                 sp_sw_list = [ln['license_name'] for ln in snipe_sw_list]
@@ -228,7 +229,7 @@ def match_dbs():
                                     free_seats = int(license['Free Seats']) - 1
                                     snipe_lic.update_one({'License ID': license['License ID']},
                                                          {'$set': {'Free Seats': free_seats}})
-                                    print('UPDATED FREE SEATS')
+                                    print('UPDATED FREE SEATS 2')
                                     print(snipe_lic.find_one({'License ID': license['License ID']}))
 
                             else:
@@ -286,8 +287,8 @@ def match_dbs():
                                                              {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
 
                                 # updated instance of lic with updated free seat numbers if it was updated
-                                lic = snipe_lic.find_one({'License Name': sft},
-                                                         {'License Name': 1, 'License ID': 1, 'Total Seats': 1, 'Free Seats': 1, '_id': 0})
+                                print('UPDATED FREE SEATS 3')
+                                print(snipe_lic.find_one({'License Name': sft}))
 
                         # check if license has any seat checked out and if not, delete license
                         if lic['Total Seats'] == lic['Free Seats']:
@@ -302,12 +303,14 @@ def match_dbs():
                             content = response.json()
                             ct += 1
                             status = str(content['status'])
-                            status = ' '
+
                             print('DELETE REQUEST, delete license {}'.format(lic['License ID']))
                             if status == 'success':
                                 print('Deleted license no longer in use')
                                 # remove license from mongodb
                                 snipe_lic.delete_one({'License ID': lic['License ID']})
+                                print('None if DELETED LIC FROM MONGO')
+                                print(snipe_lic.find_one({'License ID': lic['License ID']}))
 
         print(len(snipe_list))
         end = time()
