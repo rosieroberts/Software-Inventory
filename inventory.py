@@ -109,6 +109,8 @@ def match_dbs():
     try:
         start = time()
         ct = 0
+        # list of assets that could not be updated during script
+        not_added = []
         # for each asset in snipe_hw look up in mongodb big_fix_hw
         for count, item in enumerate(snipe_list):
             asset_id = item['ID']
@@ -125,8 +127,9 @@ def match_dbs():
             #   bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
             #                                  {'sw': 1, 'comp_name': 1, '_id': 0})
 
-            if bgfix_item and 1500 <= count <= 2000:
+            if bgfix_item and count >= 2331:
                 print(item['Asset Tag'])
+                print(count)
                 # find all software with comp_name in bigfix_sw db
                 bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
                                                {'sw': 1, 'comp_name': 1, '_id': 0})
@@ -235,28 +238,36 @@ def match_dbs():
                                                             url=url,
                                                             data=payload,
                                                             headers=cfg.api_headers)
+
+                                status_code = response.status_code
                                 print(response.text)
                                 content = response.json()
+                                print(content)
                                 ct += 1
-                                status = str(content['status'])
-                                if status == 'success':
-                                    print('updating mongo check out 2')
-                                    snipe_seats.update_one({'license_id': license['License ID'], 'id': seat['id']},
-                                                           {'$set': {'assigned_asset': asset_id,
-                                                                     'asset_name': comp_name,
-                                                                     'location': location}})
+                                if status_code == 200:
 
-                                    # Test this line when snipe works
-                                    # update license database with updated free seats (the script will update these values automatically
-                                    # when the script runs again). Still thinking about this
+                                    status = str(content['status'])
+                                    if status == 'success':
+                                        print('updating mongo check out 2')
+                                        snipe_seats.update_one({'license_id': license['License ID'], 'id': seat['id']},
+                                                               {'$set': {'assigned_asset': asset_id,
+                                                                         'asset_name': comp_name,
+                                                                         'location': location}})
 
-                                    free_seats = int(license['Free Seats']) - 1
-                                    snipe_lic.update_one({'License ID': license['License ID']},
-                                                         {'$set': {'Free Seats': free_seats}})
-                                    print('UPDATED FREE SEATS 2')
-                                    print(snipe_lic.find_one({'License ID': license['License ID']}))
-                                    logger.debug('added license {} to asset id {}'.format(license['License ID'], asset_id))
+                                        free_seats = int(license['Free Seats']) - 1
+                                        snipe_lic.update_one({'License ID': license['License ID']},
+                                                             {'$set': {'Free Seats': free_seats}})
+                                        print('UPDATED FREE SEATS 2')
+                                        print(snipe_lic.find_one({'License ID': license['License ID']}))
+                                        logger.debug('added license {} to asset id {}'.format(license['License ID'], asset_id))
 
+                                    else:
+                                        print('error, update not successful')
+
+                                if status_code == 500:
+                                    logger.debug('Asset {} is not currently active, cannot update license'.format(asset_id))
+                                    not_added.append(asset_id)
+                                    continue
                             else:
                                 print('There are no seats available for license id {} '.format(license['License ID']))
                                 continue
@@ -301,20 +312,25 @@ def match_dbs():
                                     status = str(content['status'])
                                     status = ' '
                                     print('PATCH REQUEST 2, check in seats for deleting license for asset {} '.format(item_str))
-                                    if status == 'success':
-                                        print('updating mongo remove 3')
-                                        snipe_seats.update_one({'license_id': seat['License ID'], 'id': seat['id']},
-                                                               {'$set': {'assigned_asset': None,
-                                                                         'asset_name': None,
-                                                                         'location': None}})
+                                    if status_code == 200:
+                                        if status == 'success':
+                                            print('updating mongo remove 3')
+                                            snipe_seats.update_one({'license_id': seat['License ID'], 'id': seat['id']},
+                                                                   {'$set': {'assigned_asset': None,
+                                                                             'asset_name': None,
+                                                                             'location': None}})
 
-                                        snipe_lic.update_one({'License ID': seat['License ID']},
-                                                             {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
-                                        logger.debug('Removed license {} from asset id {}'.format(lic['Licence ID'], seat['assigned_asset']))
+                                            snipe_lic.update_one({'License ID': seat['License ID']},
+                                                                 {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
+                                            logger.debug('Removed license {} from asset id {}'.format(lic['Licence ID'], seat['assigned_asset']))
 
-                                # updated instance of lic with updated free seat numbers if it was updated
-                                print('UPDATED FREE SEATS 3')
-                                print(snipe_lic.find_one({'License Name': sft}))
+                                        # updated instance of lic with updated free seat numbers if it was updated
+                                        print('UPDATED FREE SEATS 3')
+                                        print(snipe_lic.find_one({'License Name': sft}))
+                                    if status_code == 500:
+                                        logger.debug('Asset {} is not currently active, cannot update license'.format(asset_id))
+                                        not_added.append(asset_id)
+                                        continue
 
                         # check if license has any seat checked out and if not, delete license
                         if lic['Total Seats'] == lic['Free Seats']:
@@ -342,6 +358,7 @@ def match_dbs():
         print(len(snipe_list))
         end = time()
         print(end - start)
+        return not_added
 
     except:  # figuring this out still
         traceback.print_exc()
@@ -478,14 +495,15 @@ def comp_nums():
 
 def api_call():
     # license ID and seat id
-    url = cfg.api_url_software_seat.format('44', '41974')
+    url = cfg.api_url_software_seat.format('3', '1999')
     # asset ID
-    item_str = str({'asset_id': ''})
+    item_str = str({'asset_id': '5702'})
     payload = item_str.replace('\'', '\"')
     response = requests.request("PATCH",
                                 url=url,
                                 data=payload,
                                 headers=cfg.api_headers)
+
     print(response.text)
 
 
