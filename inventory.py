@@ -139,13 +139,13 @@ def match_dbs(asset_list):
 
             snipe_item = list(snipe_item)
             if snipe_item:
-                for item in snipe_item:
-                    snipe_list.append(item)
+                for asset in snipe_item:
+                    snipe_list.append(asset)
 
     else:
         # get list of snipe hw devices to look up software for
-        snipe_list2 = snipe_hw.find({}).sort('Asset Tag', pymongo.ASCENDING)
-        snipe_list2 = list(snipe_list2)
+        snipe_list = snipe_hw.find({}).sort('Asset Tag', pymongo.ASCENDING)
+        snipe_list = list(snipe_list)
 
     try:
         start = time()
@@ -669,13 +669,13 @@ def create_lic():
                 item_str = str({'seats': seat_amt})
                 payload = item_str.replace('\'', '\"')
                 print(item['count'], payload)
-                response = requests.request("PATCH",
+                response2 = requests.request("PATCH",
                                             url=url,
                                             data=payload,
                                             headers=cfg.api_headers)
-                print(response.text)
+                print(response2.text)
 
-                content = response.json()
+                content = response2.json()
                 status = str(content['status'])
 
                 if status == 'success':
