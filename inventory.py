@@ -15,7 +15,7 @@ from lib import config as cfg
 from lib import upd_dbs
 
 
-test_list = ['CMPC893','EEPC893-1','EEPC893-2','FMPC893', 'club893', '893D-8DD6','893-1AAC']
+test_list = ['CMPC893', 'EEPC893-1', 'EEPC893-2', 'FMPC893', 'club893', '893D-8DD6', '893-1AAC']
 
 logger = getLogger('inventory')
 # TODO: set to ERROR later on after setup
@@ -46,7 +46,6 @@ def main(asset_list):
     # create_lic()
     # api_call()
     print(asset_list)
-
 
 
 def match_dbs(asset_list):
@@ -93,8 +92,8 @@ def match_dbs(asset_list):
         "sw" : ""
 
 '''
-    #upd_dbs.upd_snipe_lic()
-    #create_lic()
+    # upd_dbs.upd_snipe_lic()
+    # create_lic()
 
     not_added = []
     client = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -137,7 +136,7 @@ def match_dbs(asset_list):
                 snipe_item = snipe_hw.find({'Hostname': item})
             else:
                 continue
-            
+
             snipe_item = list(snipe_item)
             if snipe_item:
                 for item in snipe_item:
@@ -408,7 +407,7 @@ def match_dbs(asset_list):
 
                                     else:
                                         logger.debug('There was something wrong removing license to asset {}'.format(asset_id))
-                                        continue 
+                                        continue
 
                         # check if license has any seat checked out and if not, delete license
                         if lic['Total Seats'] == lic['Free Seats']:
@@ -441,7 +440,7 @@ def match_dbs(asset_list):
                                     message = str(content['messages'])
                                     # I do not know if this message applies to license deletion as well. Check
                                     if message == 'Target not found':
-                                        logger.debug('Could not delete license, license not found'.format(lic['License ID']))
+                                        logger.debug('Could not delete license {}, license not found'.format(lic['License ID']))
                                         continue
 
                                 else:
@@ -614,7 +613,6 @@ def create_lic():
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
 
-
     # current software from bigfix with seat amounts ('sw', 'count') collection
     software_col = software_db['software']
     software = software_col.find()
@@ -640,7 +638,7 @@ def create_lic():
         if soft_str not in snipe_lic_list:
             print('ADDING LICENSE ***************************************')
             # url for snipe-it licenses
-            url = cfg.api_url_soft_all   
+            url = cfg.api_url_soft_all
             seat_amt = int(item['count']) + 10
             item_str = str({'name': item['sw'], 'seats': seat_amt, 'category_id': '11'})
             payload = item_str.replace('\'', '\"')
@@ -688,9 +686,6 @@ def create_lic():
 
 def inv_args(snipe_hw_list):
     assets = []
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    software_db = client['software_inventory']
-    snipe_hw_col = software_db['snipe_hw']
 
     parser = ArgumentParser(description='Software Inventory Script')
     parser.add_argument(
@@ -766,4 +761,3 @@ def inv_args(snipe_hw_list):
 
 if __name__ == '__main__':
     main(inv_args(test_list))
-

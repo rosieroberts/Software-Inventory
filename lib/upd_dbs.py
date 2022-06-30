@@ -9,8 +9,7 @@ from datetime import date
 # from pprint import pprint
 from time import sleep
 from lib import config as cfg
-#import config as cfg
-
+# import config as cfg
 
 
 logger = getLogger('upd_dbs')
@@ -168,7 +167,7 @@ def upd_snipe_lic():
             content2 = response2.json()
             count += 1
             for item in content2['rows']:
-                # get all license information and add it to a dictionary 
+                # get all license information and add it to a dictionary
                 print('BEGIN LICENSE _______________________________________')
                 print(item['id'])
                 ct = 0
@@ -433,7 +432,7 @@ def upd_bx_sw():
         # testing another software collection
         software = software_db['software']
 
-        # rename 'old' previous collection 'prev_bigfix_sw' to later drop 
+        # rename 'old' previous collection 'prev_bigfix_sw' to later drop
         prev_sw = software_db['prev_bigfix_sw']
         prev_sw.rename('del_prev_bigfix_sw')
         del_prev = software_db['del_prev_bigfix_sw']
@@ -487,7 +486,7 @@ def upd_bx_sw():
 
         if new_sw.count() > 150000:
             # remove 'old' previous collection 'prev_bigfix_sw'
-            
+
             print('deleted old bigfix collection')
             print(del_prev)
             del_prev.drop()
@@ -520,7 +519,7 @@ def mac_address_format(mac):
     return formatted_mac
 
 
-#upd_snipe_hw()
-#upd_bx_hw()
-#upd_bx_sw()
-#upd_snipe_lic()
+# upd_snipe_hw()
+# upd_bx_hw()
+# upd_bx_sw()
+# upd_snipe_lic()
