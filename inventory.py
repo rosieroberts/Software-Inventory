@@ -4,12 +4,18 @@
 import pymongo
 import requests
 from pprint import pprint
+from json import decoder
+from re import compile
 import traceback
 from time import time, sleep
 from datetime import date
 from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
+from argparse import ArgumentParser
 from lib import config as cfg
 from lib import upd_dbs
+
+
+test_list = ['CMPC893','EEPC893-1','EEPC893-2','FMPC893', 'club893', '893D-8DD6','893-1AAC']
 
 logger = getLogger('inventory')
 # TODO: set to ERROR later on after setup
@@ -33,7 +39,17 @@ logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
 
-def match_dbs():
+def main(asset_list):
+
+    match_dbs(asset_list)
+    # comp_nums()
+    # create_lic()
+    # api_call()
+    print(asset_list)
+
+
+
+def match_dbs(asset_list):
     ''' Combine all information from all databases
         Snipe HW
         Snipe License
@@ -77,8 +93,10 @@ def match_dbs():
         "sw" : ""
 
 '''
-    # upd_dbs.upd_snipe_lic()
+    #upd_dbs.upd_snipe_lic()
+    #create_lic()
 
+    not_added = []
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
 
@@ -100,11 +118,35 @@ def match_dbs():
     # unique software collection
     # soft_col = software_db['all_software']
 
-    # get list of snipe hw devices to look up software for
-    snipe_list = snipe_hw.find({}).sort('Asset Tag', pymongo.ASCENDING)
-    snipe_list = list(snipe_list)
-    licenses_to_remove = []
-    not_added = []
+    club_rgx = compile(r'((club)[\d]{3})')
+    asset_tag_rgx = compile(r'([0-9]{3}[A-Z]{1}-[A-Za-z0-9]{4})')
+    hostname_rgx = compile(r'[A-Z]{1,3}[PC]{1}\d{3}(-[\d]{1,2})*')
+
+    if asset_list:
+        snipe_list = []
+        for item in asset_list:
+            club = club_rgx.search(item)
+            asset_tag = asset_tag_rgx.search(item)
+            hostname = hostname_rgx.search(item)
+            if club:
+                snipe_item = snipe_hw.find({'Location': item})
+
+            elif asset_tag:
+                snipe_item = snipe_hw.find({'Asset Tag': item})
+            elif hostname:
+                snipe_item = snipe_hw.find({'Hostname': item})
+            else:
+                continue
+            
+            snipe_item = list(snipe_item)
+            if snipe_item:
+                for item in snipe_item:
+                    snipe_list.append(item)
+
+    else:
+        # get list of snipe hw devices to look up software for
+        snipe_list2 = snipe_hw.find({}).sort('Asset Tag', pymongo.ASCENDING)
+        snipe_list2 = list(snipe_list2)
 
     try:
         start = time()
@@ -127,7 +169,7 @@ def match_dbs():
             #   bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
             #                                  {'sw': 1, 'comp_name': 1, '_id': 0})
 
-            if bgfix_item and count >= 2331:
+            if bgfix_item and count >= 0:
                 print(item['Asset Tag'])
                 print(count)
                 # find all software with comp_name in bigfix_sw db
@@ -169,28 +211,45 @@ def match_dbs():
                                                     data=payload,
                                                     headers=cfg.api_headers)
                         print(response.text)
-                        content = response.json()
+                        status_code = response.status_code
                         ct += 1
-                        status = str(content['status'])
 
-                        if status == 'success':
-                            print('updating mongo remove 1')
-                            snipe_seats.update_one({'license_id': i['license_id'], 'id': i['id']},
-                                                   {'$set': {'assigned_asset': None,
-                                                             'asset_name': None,
-                                                             'location': None}})
+                        if status_code == 200:
+                            content = response.json()
+                            status = str(content['status'])
+                            if status == 'success':
+                                print('updating mongo remove 1')
+                                snipe_seats.update_one({'license_id': i['license_id'], 'id': i['id']},
+                                                       {'$set': {'assigned_asset': None,
+                                                                 'asset_name': None,
+                                                                 'location': None}})
 
-                            lic = snipe_lic.find_one({'License ID': i['license_id']})
+                                lic = snipe_lic.find_one({'License ID': i['license_id']})
 
-                            snipe_lic.update_one({'License ID': i['license_id']},
-                                                 {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
+                                snipe_lic.update_one({'License ID': i['license_id']},
+                                                     {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
 
-                            print('UPDATED FREE SEATS 1')
-                            # updated instance of lic with updated free seat numbers if it was updated
-                            print(snipe_lic.find_one({'License ID': i['license_id']}))
+                                print('UPDATED FREE SEATS 1')
+                                # updated instance of lic with updated free seat numbers if it was updated
+                                print(snipe_lic.find_one({'License ID': i['license_id']}))
 
-                            print(snipe_seats.find_one({'license_id': i['license_id'], 'id': i['id']}))
-                            logger.debug('Removed license {} from asset id {}'.format(i['license_id'], asset_id))
+                                print(snipe_seats.find_one({'license_id': i['license_id'], 'id': i['id']}))
+                                logger.debug('Removed license {} from asset id {}'.format(i['license_id'], asset_id))
+
+                            elif status == 'error':
+                                message = str(content['messages'])
+                                if message == 'Target not found':
+                                    logger.debug('Asset {} is not currently active, cannot update license'.format(asset_id))
+                                    not_added.append(asset_id)
+                                    continue
+
+                            else:
+                                logger.debug('error, license removal not successful')
+                                continue
+
+                        else:
+                            logger.debug('There was something wrong removing license from asset {}'.format(asset_id))
+                            continue
 
                 # get list of license names in snipe
                 sp_sw_list = [ln['license_name'] for ln in snipe_sw_list]
@@ -198,9 +257,8 @@ def match_dbs():
                 # check if each software item in snipe is not in bigfix to see if it can be removed
                 not_in_bigfix_sw = list(filter(lambda i: i not in bf_sw_list, sp_sw_list))
 
-                # print('NOT IN BF, IN SP')
-                # pprint(not_in_bigfix_sw)
-                licenses_to_remove.append(not_in_bigfix_sw)
+                print('NOT IN BF, IN SP')
+                pprint(not_in_bigfix_sw)
 
                 for itm in bgfix_sw_list:
                     software = itm['sw']
@@ -240,13 +298,14 @@ def match_dbs():
                                                             headers=cfg.api_headers)
 
                                 status_code = response.status_code
+                                print(status_code)
                                 print(response.text)
-                                content = response.json()
-                                print(content)
                                 ct += 1
                                 if status_code == 200:
-
+                                    content = response.json()
+                                    print(content)
                                     status = str(content['status'])
+
                                     if status == 'success':
                                         print('updating mongo check out 2')
                                         snipe_seats.update_one({'license_id': license['License ID'], 'id': seat['id']},
@@ -261,12 +320,18 @@ def match_dbs():
                                         print(snipe_lic.find_one({'License ID': license['License ID']}))
                                         logger.debug('added license {} to asset id {}'.format(license['License ID'], asset_id))
 
-                                    else:
-                                        print('error, update not successful')
+                                    elif status == 'error':
+                                        message = str(content['messages'])
+                                        if message == 'Target not found':
+                                            logger.debug('Asset {} is not currently active, cannot update license'.format(asset_id))
+                                            not_added.append(asset_id)
+                                            continue
 
-                                if status_code == 500:
-                                    logger.debug('Asset {} is not currently active, cannot update license'.format(asset_id))
-                                    not_added.append(asset_id)
+                                    else:
+                                        logger.debug('error, license addition not successful')
+                                        continue
+                                else:
+                                    logger.debug('There was something wrong adding license to asset {}'.format(asset_id))
                                     continue
                             else:
                                 print('There are no seats available for license id {} '.format(license['License ID']))
@@ -307,12 +372,13 @@ def match_dbs():
                                                                 data=payload,
                                                                 headers=cfg.api_headers)
                                     print(response.text)
-                                    content = response.json()
+                                    status_code = response.status_code
                                     ct += 1
-                                    status = str(content['status'])
                                     status = ' '
                                     print('PATCH REQUEST 2, check in seats for deleting license for asset {} '.format(item_str))
                                     if status_code == 200:
+                                        content = response.json()
+                                        status = str(content['status'])
                                         if status == 'success':
                                             print('updating mongo remove 3')
                                             snipe_seats.update_one({'license_id': seat['License ID'], 'id': seat['id']},
@@ -320,20 +386,34 @@ def match_dbs():
                                                                              'asset_name': None,
                                                                              'location': None}})
 
-                                            snipe_lic.update_one({'License ID': seat['License ID']},
+                                            snipe_lic.update_one({'License ID': lic['License ID']},
                                                                  {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
-                                            logger.debug('Removed license {} from asset id {}'.format(lic['Licence ID'], seat['assigned_asset']))
+                                            print(snipe_lic.find_one({'License ID': lic['License ID']}))
+                                            logger.debug('Removed license {} from asset id {}'.format(lic['License ID'], seat['assigned_asset']))
 
-                                        # updated instance of lic with updated free seat numbers if it was updated
-                                        print('UPDATED FREE SEATS 3')
-                                        print(snipe_lic.find_one({'License Name': sft}))
-                                    if status_code == 500:
-                                        logger.debug('Asset {} is not currently active, cannot update license'.format(asset_id))
-                                        not_added.append(asset_id)
-                                        continue
+                                            # updated instance of lic with updated free seat numbers if it was updated
+                                            print('UPDATED FREE SEATS 3')
+                                            print(snipe_lic.find_one({'License Name': sft}))
+
+                                        elif status == 'error':
+                                            message = str(content['messages'])
+                                            if message == 'Target not found':
+                                                logger.debug('Asset {} is not currently active, cannot update license'.format(asset_id))
+                                                not_added.append(asset_id)
+                                                continue
+
+                                        else:
+                                            logger.debug('error, license removal not successful')
+                                            continue
+
+                                    else:
+                                        logger.debug('There was something wrong removing license to asset {}'.format(asset_id))
+                                        continue 
 
                         # check if license has any seat checked out and if not, delete license
                         if lic['Total Seats'] == lic['Free Seats']:
+                            print(sft, lic['License ID'])
+                            print('DELETE license________________________')
                             url = cfg.api_url_software_lic.format(lic['License ID'])
                             if ct == 110:
                                 sleep(30)
@@ -342,25 +422,44 @@ def match_dbs():
                                                         url=url,
                                                         headers=cfg.api_headers)
                             print(response.text)
-                            content = response.json()
+                            status_code = response.status_code
                             ct += 1
-                            status = str(content['status'])
 
                             print('DELETE REQUEST, delete license {}'.format(lic['License ID']))
-                            if status == 'success':
-                                print('Deleted license no longer in use')
-                                # remove license from mongodb
-                                snipe_lic.delete_one({'License ID': lic['License ID']})
-                                print('None if DELETED LIC FROM MONGO')
-                                print(snipe_lic.find_one({'License ID': lic['License ID']}))
-                                logger.debug('Removed license {} from snipe-it'.format(lic['Licence ID']))
+                            if status_code == 200:
+                                content = response.json()
+                                status = str(content['status'])
+                                if status == 'success':
+                                    print('Deleted license no longer in use')
+                                    # remove license from mongodb
+                                    snipe_lic.delete_one({'License ID': lic['License ID']})
+                                    print('None if DELETED LIC FROM MONGO')
+                                    print(snipe_lic.find_one({'License ID': lic['License ID']}))
+                                    logger.debug('Removed license {} from snipe-it'.format(lic['License ID']))
 
+                                elif status == 'error':
+                                    message = str(content['messages'])
+                                    # I do not know if this message applies to license deletion as well. Check
+                                    if message == 'Target not found':
+                                        logger.debug('Could not delete license, license not found'.format(lic['License ID']))
+                                        continue
+
+                                else:
+                                    logger.debug('error, license deletion not successful')
+                                    continue
+
+                            else:
+                                logger.debug('There was something wrong deleting license {}'.format(lic['License ID']))
+                                continue
         print(len(snipe_list))
         end = time()
         print(end - start)
         return not_added
 
-    except:  # figuring this out still
+    except(KeyError,
+           decoder.JSONDecodeError):
+        logger.error('There was an error updating the licenses to Snipe-it, check licenses for asset:\n{}'
+                     .format(item), exc_info=True)
         traceback.print_exc()
         pprint(item)
         print('error')
@@ -512,15 +611,9 @@ def create_lic():
 
     snipe_lic_list = []
 
-    # url for snipe-it licenses
-    url = cfg.api_url_soft_all
-
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
 
-    # all-time unique software collection (may no longer need this)
-    # soft_col = software_db['all_software']
-    # all_software = soft_col.find()
 
     # current software from bigfix with seat amounts ('sw', 'count') collection
     software_col = software_db['software']
@@ -530,7 +623,6 @@ def create_lic():
     lic_col = software_db['snipe_lic']
     all_licenses = lic_col.find()
 
-    # all_software = list(all_software)
     software = list(software)
     all_licenses = list(all_licenses)
 
@@ -538,7 +630,7 @@ def create_lic():
         # create list of all license names in snipe-it
         snipe_lic_list.append(item['License Name'])
 
-    # for each software name in bigfix
+    # for each software name in bigfix - 'software' collection in mongodb 'sw', 'count'
     for item in software:
 
         # remove utf-8 character
@@ -546,33 +638,44 @@ def create_lic():
         soft_str = soft_str.replace('Â', '')
 
         if soft_str not in snipe_lic_list:
+            print('ADDING LICENSE ***************************************')
+            # url for snipe-it licenses
+            url = cfg.api_url_soft_all   
             seat_amt = int(item['count']) + 10
             item_str = str({'name': item['sw'], 'seats': seat_amt, 'category_id': '11'})
             payload = item_str.replace('\'', '\"')
-
             response = requests.request("POST",
                                         url=url,
                                         data=payload,
                                         headers=cfg.api_headers)
-            print(response.text)
 
         else:
+            # license collection from snipe
             license = lic_col.find_one({'License Name': soft_str},
                                        {'_id': 0, 'License Name': 1, 'License ID': 1, 'Total Seats': 1})
 
             if int(item['count']) + 20 > int(license['Total Seats']) >= int(item['count']) + 10:
                 continue
 
+            elif int(license['Total Seats']) > int(item['count']) + 20:
+                print('There are more seats than there should be for license {}.\n'
+                      'There should be {} but there are {}. Review.'.format(license['License Name'],
+                                                                            item['count'],
+                                                                            license['Total Seats']))
+
             else:
+                print('UPDATING LICENSE ##################################')
                 url = cfg.api_url_software_lic.format(license['License ID'])
+                print(url)
                 seat_amt = int(item['count']) + 10
                 item_str = str({'seats': seat_amt})
                 payload = item_str.replace('\'', '\"')
-
-                response = requests.request("PUT",
+                print(item['count'], payload)
+                response = requests.request("PATCH",
                                             url=url,
                                             data=payload,
                                             headers=cfg.api_headers)
+                print(response.text)
 
                 content = response.json()
                 status = str(content['status'])
@@ -580,9 +683,87 @@ def create_lic():
                 if status == 'success':
                     lic_col.update_one({'License ID': license['License ID']},
                                        {'$set': {'Total Seats': seat_amt}})
+                    print('Updated license {} in MongoDB'.format(license['License ID']))
 
 
-match_dbs()
-# comp_nums()
-# create_lic()
-# api_call()
+def inv_args(snipe_hw_list):
+    assets = []
+    client = pymongo.MongoClient("mongodb://localhost:27017/")
+    software_db = client['software_inventory']
+    snipe_hw_col = software_db['snipe_hw']
+
+    parser = ArgumentParser(description='Software Inventory Script')
+    parser.add_argument(
+        '-club', '-c',
+        nargs='*',
+        help='Club Number in "club000" format')
+    parser.add_argument(
+        '-assetTag', '-a',
+        nargs='*',
+        help='Asset tag of the computer to get list of software')
+    parser.add_argument(
+        '-hostname', '-n',
+        nargs='*',
+        help='Hostname of the computer to get list of software')
+    inv_args = parser.parse_args()
+
+    try:
+
+        if inv_args.club:
+            club_rgx = compile(r'((club)[\d]{3})')
+            for item in inv_args.club:
+                club_ = club_rgx.search(item)
+                if club_:
+                    club_ = str(club_.group(0))
+                    if len(item) == len(club_):
+                        assets.append(club_)
+                    else:
+                        logger.warning('{} is not in the right format, try again'.format(item))
+                        continue
+                else:
+                    logger.warning('{} is not in the right format, try again'.format(item))
+                    continue
+
+        if inv_args.assetTag:
+            asset_tag_rgx = compile(r'([0-9]{3}[A-Z]{1}-[A-Za-z0-9]{4})')
+            for item in inv_args.assetTag:
+                asset_tag = asset_tag_rgx.search(item)
+                if asset_tag:
+                    asset_tag = str(asset_tag.group(0))
+                    if len(item) == len(asset_tag):
+                        assets.append(asset_tag)
+                    else:
+                        logger.warning('{} is not in the right format, try again'.format(item))
+                        continue
+                else:
+                    logger.warning('{} is not in the right format, try again'.format(item))
+                    continue
+
+        if inv_args.hostname:
+            hostname_rgx = compile(r'[A-Z]{1,3}[PC]{1}\d{3}(-[\d]{1,2})*')
+            for item in inv_args.hostname:
+                hostname = hostname_rgx.search(item)
+                if hostname:
+                    hostname = str(hostname.group(0))
+                    if len(item) == len(hostname):
+                        assets.append(hostname)
+                    else:
+                        logger.warning('{} is not in the right format, try again'.format(item))
+                        continue
+                else:
+                    logger.warning('{} is not in the right format, try again'.format(item))
+                    continue
+
+        if not inv_args.club and not inv_args.assetTag and not inv_args.hostname:
+            assets = snipe_hw_list
+
+        return assets
+
+    except(OSError, AttributeError):
+        logger.critical('There was a problem getting all assets, try again', exc_info=True)
+        return None
+
+
+if __name__ == '__main__':
+    main(inv_args(test_list))
+

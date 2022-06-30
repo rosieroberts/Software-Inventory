@@ -9,7 +9,9 @@ from datetime import date
 # from pprint import pprint
 from time import sleep
 from lib import config as cfg
-# import config as cfg
+#import config as cfg
+
+
 
 logger = getLogger('upd_dbs')
 # TODO: set to ERROR later on after setup
@@ -18,6 +20,7 @@ logger.setLevel(INFO)
 file_formatter = Formatter('{asctime} {name} {levelname}: {message}', style='{')
 stream_formatter = Formatter('{message}', style='{')
 today = date.today()
+today_date = today.strftime('%m-%d-%Y')
 
 # logfile
 file_handler = FileHandler('/opt/Software-Inventory/logs/software_inventory{}.log'
@@ -78,7 +81,8 @@ def upd_snipe_hw():
                               'IP': item['custom_fields']['IP']['value'],
                               'Mac Address': item['custom_fields']['Mac Address']['value'],
                               'Location': item['location']['name'],
-                              'Hostname': item['custom_fields']['Hostname']['value']}
+                              'Hostname': item['custom_fields']['Hostname']['value'],
+                              'Date': today_date}
                     all_items.append(device)
                 else:
                     continue
@@ -164,16 +168,20 @@ def upd_snipe_lic():
             content2 = response2.json()
             count += 1
             for item in content2['rows']:
+                # get all license information and add it to a dictionary 
                 print('BEGIN LICENSE _______________________________________')
                 print(item['id'])
                 ct = 0
                 device = {'License ID': item['id'],
                           'License Name': item['name'],
                           'Total Seats': item['seats'],
-                          'Free Seats': item['free_seats_count']}
+                          'Free Seats': item['free_seats_count'],
+                          'Date': today_date}
+                # append each dictionary of license information into list of licenses
                 all_items.append(device)
 
                 url2 = cfg.api_url_soft_all_seats.format(item['id'])
+                # seats
                 for offset2 in range(0, item['seats'], 50):
                     querystring = {'offset': offset2}
                     # get seat information from snipe-it and add to mongodb
@@ -207,7 +215,8 @@ def upd_snipe_lic():
                                 'location': location,
                                 'seat_name': itm['name'],
                                 'asset_name': hostname,
-                                'license_name': item['name']}
+                                'license_name': item['name'],
+                                'date': today_date}
 
                         seat_list.append(seat)
 
@@ -228,6 +237,7 @@ def upd_snipe_lic():
                     times += 1
                     # print(i)
                     snipe_seat_col.insert_many(seat_list[i:i + 1000])
+                    print('Inserted seats for license {} into snipe seats collection'.format(item['id']))
 
                 logger.debug('snipe db seats updated')
                 print('FINAL len seat_list ', len(seat_list))
@@ -236,7 +246,7 @@ def upd_snipe_lic():
 
             # delete prior scan items
             if snipe_lic_col.count() > 0:
-                snipe_lic_col.delete_many({'License ID': item['id']})
+                snipe_lic_col.delete_many({})
 
             # insert list of dictionaries
             snipe_lic_col.insert_many(all_items)
@@ -298,7 +308,9 @@ def upd_bx_hw():
 
                 comp_dict = {'comp_name': answer1,
                              'IP': answer1_2,
-                             'mac_addr': mac_address_format(answer1_3)}
+                             'mac_addr': mac_address_format(answer1_3),
+                             'date': today_date}
+
                 comp_list.append(comp_dict)
 
             # if there was a value missing, add None
@@ -345,7 +357,7 @@ def upd_bx_hw():
 
 
 def upd_bx_sw():
-    """Returns all current hardware information in bigfix
+    """Returns all current software information in bigfix
 
     Args:
         None
@@ -358,13 +370,14 @@ def upd_bx_sw():
 
     try:
         # get computer name, IP, Mac Address
-        # software_response = cfg.response
+        software_response = cfg.response
 
-        # soft_response = software_response.text
+        soft_response = software_response.text
 
         # Adding response to file
-        # with open('software.txt', 'w') as f:
-        #     f.write(soft_response)
+        with open('software.txt', 'w') as f:
+            f.write(soft_response)
+        print('software updated')
         file_ = open('software.txt', 'rb')
         tests = dumps(xmltodict.parse(file_))
         tests = loads(tests)
@@ -387,7 +400,8 @@ def upd_bx_sw():
                 answer1_2 = answer[count]['Answer'][1]['#text']
 
                 soft_dict = {'comp_name': answer1,
-                             'sw': answer1_2}
+                             'sw': answer1_2,
+                             'date': today_date}
                 soft_list.append(soft_dict)
 
                 all_software.append(answer1_2)
@@ -395,7 +409,8 @@ def upd_bx_sw():
             # if there was a value missing, add None
             except (KeyError):
                 soft_dict = {'comp_name': answer1,
-                             'sw': answer1_2}
+                             'sw': answer1_2,
+                             'date': today_date}
                 if answer1:
                     soft_dict['comp_name'] = answer1
                 if answer1_2:
@@ -404,6 +419,7 @@ def upd_bx_sw():
                 soft_list.append(soft_dict)
 
                 continue
+        print(count)
         # print(*soft_list, sep='\n')
 
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -417,15 +433,30 @@ def upd_bx_sw():
         # testing another software collection
         software = software_db['software']
 
-        # use collection named "snipe"
-        mycol = software_db['bigfix_sw']
+        # rename 'old' previous collection 'prev_bigfix_sw' to later drop 
+        prev_sw = software_db['prev_bigfix_sw']
+        prev_sw.rename('del_prev_bigfix_sw')
+        del_prev = software_db['del_prev_bigfix_sw']
+        print(del_prev)
+
+        # use collection named "bigfix_sw" and rename
+        bigfix_sw = software_db['bigfix_sw']
+        # rename previous bigfix sw collection
+        bigfix_sw.rename('prev_bigfix_sw')
+        prev_sw = software_db['prev_bigfix_sw']
+        print(prev_sw)
+
+        # create new collection named 'bigfix_sw'
+        new_sw = software_db['bigfix_sw']
+        print(new_sw)
 
         # delete prior scan items
-        if mycol.count() > 0:
-            mycol.delete_many({})
-
+        if new_sw.count() > 0:
+            new_sw.delete_many({})
+        print('inserting items into new db')
         # insert list of dictionaries
-        mycol.insert_many(soft_list)
+        print(len('soft_list len'), soft_list)
+        new_sw.insert_many(soft_list)
         logger.debug('bigfix software updated')
 
         # get amount of seats(instances) for each license(software)
@@ -453,6 +484,13 @@ def upd_bx_sw():
         if software.count() > 0:
             software.delete_many({})
         software.insert_many(soft_count_list)
+
+        if new_sw.count() > 150000:
+            # remove 'old' previous collection 'prev_bigfix_sw'
+            
+            print('deleted old bigfix collection')
+            print(del_prev)
+            del_prev.drop()
 
         return soft_list
 
@@ -482,7 +520,7 @@ def mac_address_format(mac):
     return formatted_mac
 
 
-# upd_snipe_hw()
-# upd_bx_hw()
-# upd_bx_sw()
-# upd_snipe_lic()
+#upd_snipe_hw()
+#upd_bx_hw()
+#upd_bx_sw()
+#upd_snipe_lic()
