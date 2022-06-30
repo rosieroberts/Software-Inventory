@@ -646,6 +646,7 @@ def create_lic():
                                         url=url,
                                         data=payload,
                                         headers=cfg.api_headers)
+            print(response.text)
 
         else:
             # license collection from snipe
@@ -670,9 +671,9 @@ def create_lic():
                 payload = item_str.replace('\'', '\"')
                 print(item['count'], payload)
                 response2 = requests.request("PATCH",
-                                            url=url,
-                                            data=payload,
-                                            headers=cfg.api_headers)
+                                             url=url,
+                                             data=payload,
+                                             headers=cfg.api_headers)
                 print(response2.text)
 
                 content = response2.json()
