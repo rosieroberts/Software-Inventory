@@ -40,6 +40,8 @@ def upd_snipe_hw():
     this function returns SNIPE-IT's current device information
     this device information will be used to have a snapshot of
     the devices already in snipe-it.
+    This function deletes the prior contents of the snipe_hw collection
+    and it populates it again with the new information
 
     Args:
         None
@@ -73,6 +75,7 @@ def upd_snipe_hw():
                                         params=querystring)
             content = response.json()
             for item in content['rows']:
+                # only assets that have a hostname and it is category 'computer'
                 if item['custom_fields']['Hostname']['value'] != '' and \
                    item['category']['id'] == 2:
                     device = {'ID': item['id'],
@@ -115,6 +118,7 @@ def upd_snipe_hw():
 
 def upd_snipe_lic():
     """Returns all current license information in snipe
+    and updates mongodb collection snipe_lic
 
     Args:
         None
@@ -153,12 +157,14 @@ def upd_snipe_lic():
         total_record = content['total']
         count = 0
 
+        # get total number of records and quit if none
         if total_record == 0:
             logger.info('No License data in Snipe-IT')
             content = None
             return content
 
-        for offset in range(0, total_record, 500):
+        # for every 500 records in total license records
+        for offset in range(65, total_record, 500):   # should be 0 instead of 65
             querystring = {"offset": offset}
             response2 = requests.request("GET",
                                          url=url,
@@ -176,11 +182,13 @@ def upd_snipe_lic():
                           'Total Seats': item['seats'],
                           'Free Seats': item['free_seats_count'],
                           'Date': today_date}
+
                 # append each dictionary of license information into list of licenses
                 all_items.append(device)
 
                 url2 = cfg.api_url_soft_all_seats.format(item['id'])
-                # seats
+
+                # for every 50 seats in total seats per license
                 for offset2 in range(0, item['seats'], 50):
                     querystring = {'offset': offset2}
                     # get seat information from snipe-it and add to mongodb
@@ -189,11 +197,12 @@ def upd_snipe_lic():
                                                  headers=cfg.api_headers,
                                                  params=querystring)
                     content3 = response3.json()
+
+                    # sleep if number of requests is 90 to prevent errors
                     count += 1
                     if count == 90:
                         sleep(60)
                         count = 0
-
                     for itm in content3['rows']:
                         ct += 1
                         if itm['assigned_asset'] is None:
@@ -277,13 +286,13 @@ def upd_bx_hw():
 
     try:
         # get computer name, IP, Mac Address
-        # hardware_response = cfg.hardware_response
+        hardware_response = cfg.hardware_response
 
-        # hard_response = hardware_response.text
+        hard_response = hardware_response.text
 
         # Adding response to file (waiting on bigfix problem to get fixed due to it having errors)
-        # with open('hardware.txt', 'w') as f:
-        #   f.write(hard_response)
+        with open('hardware.txt', 'w') as f:
+            f.write(hard_response)
 
         file_ = open('hardware.txt', 'rb')
         testh = dumps(xmltodict.parse(file_))
@@ -345,6 +354,7 @@ def upd_bx_hw():
         # insert list of dictionaries
         mycol.insert_many(comp_list)
         logger.debug('bigfix harware updated')
+        print(comp_list)
 
         return comp_list
 
@@ -436,7 +446,6 @@ def upd_bx_sw():
         prev_sw = software_db['prev_bigfix_sw']
         prev_sw.rename('del_prev_bigfix_sw')
         del_prev = software_db['del_prev_bigfix_sw']
-        print(del_prev)
 
         # use collection named "bigfix_sw" and rename
         bigfix_sw = software_db['bigfix_sw']
@@ -519,7 +528,8 @@ def mac_address_format(mac):
     return formatted_mac
 
 
-# upd_snipe_hw()
-# upd_bx_hw()
-# upd_bx_sw()
-# upd_snipe_lic()
+if __name__ == '__main__':
+    upd_snipe_hw()
+    upd_bx_hw()
+    upd_bx_sw()
+    upd_snipe_lic()
