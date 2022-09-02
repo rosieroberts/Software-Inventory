@@ -9,7 +9,7 @@ from datetime import date
 # from pprint import pprint
 from time import sleep
 from lib import config as cfg
-#import config as cfg
+# import config as cfg
 
 
 logger = getLogger('upd_dbs')

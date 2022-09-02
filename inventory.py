@@ -60,7 +60,7 @@ def main(asset_list):
     # api_call()
 
     # Thinking about removing this function, just increase the number of seats
-    #check_in(asset_list)
+    # check_in(asset_list)
 
 
 def get_asset_list(asset_list):
@@ -72,19 +72,19 @@ def get_asset_list(asset_list):
     asset_db = client['inventory']
 
     # BigFix HW collection
-    bigfix_hw = software_db['bigfix_hw']
+    # bigfix_hw = software_db['bigfix_hw']
 
     # BigFix SW collection
-    bigfix_sw = software_db['bigfix_sw']
+    # bigfix_sw = software_db['bigfix_sw']
 
     # Snipe HW collection
     snipe_hw = software_db['snipe_hw']
 
     # Snipe Licenses collection
-    snipe_lic = software_db['snipe_lic']
+    # snipe_lic = software_db['snipe_lic']
 
     # Snipe Seats  collection
-    snipe_seats = software_db['snipe_seat']
+    # snipe_seats = software_db['snipe_seat']
 
     # deleted assets collection
     deleted = asset_db['deleted']
@@ -190,7 +190,7 @@ def match_dbs(snipe_list):
     bigfix_sw = software_db['bigfix_sw']
 
     # Snipe HW collection
-    snipe_hw = software_db['snipe_hw']
+    # snipe_hw = software_db['snipe_hw']
 
     # Snipe Licenses collection
     snipe_lic = software_db['snipe_lic']
@@ -200,7 +200,6 @@ def match_dbs(snipe_list):
 
     # unique software collection
     # soft_col = software_db['all_software']
-
 
     try:
         start = time()
@@ -404,7 +403,7 @@ def match_dbs(snipe_list):
                                                  {'License Name': 1, 'License ID': 1, 'Total Seats': 1, 'Free Seats': 1, '_id': 0})
 
                         if not lic:
-                            continue 
+                            continue
                         # if there are licenses checked out to assets, check them in to allow deletion of license
                         if lic['Total Seats'] != lic['Free Seats']:
                             out_seats = snipe_seats.find({'license id': lic['License ID']})
@@ -665,7 +664,7 @@ def api_call():
 def check_in(snipe_list):
     # check in seats for each asset in list of snipe assets
     # use this when deleting an item from snipe it.
-    # might add this to the inventory script 
+    # might add this to the inventory script
     id_list = []
 
     if snipe_list is None:
@@ -678,18 +677,18 @@ def check_in(snipe_list):
 
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
-    asset_db = client['inventory']
+    # asset_db = client['inventory']
 
     # Snipe Seats  collection
     snipe_seats = software_db['snipe_seat']
 
     # deleted assets collection
-    deleted = asset_db['deleted']
+    # deleted = asset_db['deleted']
 
     for id_ in id_list:
         # for each asset in list
         seats = snipe_seats.find({'assigned_asset': id_},
-                                {'id': 1, 'license_id': 1, '_id':0})
+                                 {'id': 1, 'license_id': 1, '_id': 0})
 
         seats = list(seats)
         print(seats)
@@ -698,7 +697,7 @@ def check_in(snipe_list):
             license_id = seat['license_id']
             seat_id = seat['id']
             print(license_id, seat_id)
-         
+
             # license ID and seat id
             url = cfg.api_url_software_seat.format(license_id, seat_id)
 
@@ -709,7 +708,6 @@ def check_in(snipe_list):
                                         data=payload,
                                         headers=cfg.api_headers)
             print(response.text)
-
 
 
 def create_lic():
