@@ -14,6 +14,9 @@ from argparse import ArgumentParser
 from lib import config as cfg
 from lib import upd_dbs
 
+# get today's date
+today = date.today()
+today_date = today.strftime('%m-%d-%Y')
 
 # pass test_list in inv_args if wanting to use for testing
 test_list = ['CMPC893', 'EEPC893-1', 'EEPC893-2', 'FMPC893', 'club963', '960C-9125', '954C-37F1']
@@ -42,16 +45,16 @@ logger.addHandler(stream_handler)
 
 def main(asset_list):
     # Update databases first
-    upd_dbs.upd_snipe_hw()
-    upd_dbs.upd_bx_hw()
-    upd_dbs.upd_bx_sw()
-    upd_dbs.upd_snipe_lic()
+    #upd_dbs.upd_snipe_hw()
+    #upd_dbs.upd_bx_hw()
+    #upd_dbs.upd_bx_sw()
+    #upd_dbs.upd_snipe_lic()
 
     # create licenses
     create_lic()
 
     # add licenses to assets
-    match_dbs(asset_list)
+    # match_dbs(asset_list)
 
     # view number of licenses
     # comp_nums()
@@ -202,6 +205,8 @@ def match_dbs(snipe_list):
     # soft_col = software_db['all_software']
 
     try:
+        # sleep in case the 
+        sleep(60)
         start = time()
         ct = 0
         # list of assets that could not be updated during script
@@ -679,7 +684,7 @@ def check_in(snipe_list):
     software_db = client['software_inventory']
     # asset_db = client['inventory']
 
-    # Snipe Seats  collection
+    # Snipe Seats collection
     snipe_seats = software_db['snipe_seat']
 
     # deleted assets collection
@@ -726,6 +731,9 @@ def create_lic():
     lic_col = software_db['snipe_lic']
     all_licenses = lic_col.find()
 
+    # Snipe Seats collection
+    snipe_seats = software_db['snipe_seat']
+
     software = list(software)
     all_licenses = list(all_licenses)
 
@@ -733,61 +741,118 @@ def create_lic():
         # create list of all license names in snipe-it
         snipe_lic_list.append(item['License Name'])
 
+    ct = 0
+    count = 0
     # for each software name in bigfix - 'software' collection in mongodb 'sw', 'count'
     for item in software:
-
-        # remove utf-8 character
+        count += 1
+        # sometimes characters not supported appear in software names from bigfix
         soft_str = item['sw']
         soft_str = soft_str.replace('Â', '')
+        soft_str = soft_str.replace('™', '')
+        soft_str = soft_str.replace('®', '')
 
-        if soft_str not in snipe_lic_list:
-            print('ADDING LICENSE ***************************************')
-            # url for snipe-it licenses
-            url = cfg.api_url_soft_all
-            seat_amt = int(item['count']) + 10
-            item_str = str({'name': item['sw'], 'seats': seat_amt, 'category_id': '11'})
-            payload = item_str.replace('\'', '\"')
-            response = requests.request("POST",
-                                        url=url,
-                                        data=payload,
-                                        headers=cfg.api_headers)
-            print(response.text)
+        if ct == 110:
+            sleep(60)
+            ct = 0
 
-        else:
+        #if soft_str not in snipe_lic_list:
+            #print('ADDING LICENSE *******', item['sw'])
+        #else:
+            #print('UPDATING LICENSE #######', item['sw'])
             # license collection from snipe
             license = lic_col.find_one({'License Name': soft_str},
                                        {'_id': 0, 'License Name': 1, 'License ID': 1, 'Total Seats': 1})
 
-            if int(item['count']) + 500 > int(license['Total Seats']) >= int(item['count']) + 100:
-                continue
+            #if int(item['count']) + 500 >= int(license['Total Seats']) >= int(item['count']) + 100:
+             #   print('GOOD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
+                #continue
+            #else:
+             #   print('BAD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
+                #continue
 
-            elif int(license['Total Seats']) > int(item['count']) + 500:
-                print('There are more seats than there should be for license {}.\n'
-                      'There should be {} but there are {}. Review.'.format(license['License Name'],
-                                                                            item['count'],
-                                                                            license['Total Seats']))
+        #print('NEXT')
+        #continue
+           
+        try:
 
-            else:
-                print('UPDATING LICENSE ##################################')
-                url = cfg.api_url_software_lic.format(license['License ID'])
-                print(url)
+            if soft_str not in snipe_lic_list:
+                print('ADDING LICENSE *******', item['sw'])
+                print(count)
+                # url for snipe-it licenses
+                url = cfg.api_url_soft_all
                 seat_amt = int(item['count']) + 500
-                item_str = str({'seats': seat_amt})
+                item_str = str({'name': soft_str, 'seats': seat_amt, 'category_id': '11'})
                 payload = item_str.replace('\'', '\"')
-                print(item['count'], payload)
-                response2 = requests.request("PATCH",
-                                             url=url,
-                                             data=payload,
-                                             headers=cfg.api_headers)
-                print(response2.text)
+                response = requests.request("POST",
+                                            url=url,
+                                            data=payload,
+                                            headers=cfg.api_headers)
+                print(response.text)
 
-                content = response2.json()
+                content = response.json()
+                print(content)
                 status = str(content['status'])
-
+                ct += 1
                 if status == 'success':
-                    lic_col.update_one({'License ID': license['License ID']},
-                                       {'$set': {'Total Seats': seat_amt}})
-                    print('Updated license {} in MongoDB'.format(license['License ID']))
+                    print(soft_str, seat_amt, content['payload']['id'])
+                    ins = lic_col.insert_one({'License Name': soft_str,
+                                              'Total Seats': seat_amt,
+                                              'Free Seats': seat_amt,
+                                              'License ID': content['payload']['id'],
+                                              'Date': today_date})
+                    print(ins)
+                    logger.debug('Added License {} to MongoDB'.format(soft_str))
+                
+            else:
+                # license collection from snipe
+                license = lic_col.find_one({'License Name': soft_str},
+                                           {'_id': 0, 'License Name': 1, 'License ID': 1, 'Total Seats': 1})
+       
+                if int(item['count']) + 500 >= int(license['Total Seats']) >= int(item['count']) + 100:
+                    print('GOOD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
+                    print(count)
+                    continue
+       
+                #elif int(license['Total Seats']) > int(item['count']) + 500:
+                 #   print('There are more seats than there should be for license {}.\n'
+                  #        'There should be {} but there are {}. Review.'.format(license['License Name'],
+                   #                                                             int(item['count']) + 500,
+                                                                             #   license['Total Seats']))
+       
+                else:
+                    print('UPDATING LICENSE #######', item['sw'])
+                    print('BAD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
+                    print(count)
+                    url = cfg.api_url_software_lic.format(license['License ID'])
+                    print(url)
+                    seat_amt = int(item['count']) + 500
+                    item_str = str({'seats': seat_amt})
+                    payload = item_str.replace('\'', '\"')
+                    print(item['count'], payload)
+                    response2 = requests.request("PATCH",
+                                                 url=url,
+                                                 data=payload,
+                                                 headers=cfg.api_headers)
+                    print(response2.text)
+       
+                    content = response2.json()
+                    status = str(content['status'])
+                    ct += 1    
+                    if status == 'success':
+                        lic_col.update_one({'License ID': license['License ID']},
+                                           {'$set': {'Total Seats': seat_amt}})
+                        logger.debug('Updated license {} in MongoDB'.format(license['License ID']))
+
+                    else:
+                        print('Could not update license ', item['sw'])
+
+        except UnicodeEncodeError:
+             sleep(120)
+             loger.exception('Decode error with software item {}'.format(soft_str))
+             print('Exception', exc_info=True)
+             print(count)
+
 
 
 def inv_args():

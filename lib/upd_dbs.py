@@ -3,18 +3,18 @@ from json import loads, dumps
 import xmltodict
 import requests
 from netaddr import EUI, mac_unix_expanded
-from logging import FileHandler, Formatter, StreamHandler, getLogger, INFO
+from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from json import decoder
 from datetime import date
 # from pprint import pprint
 from time import sleep
 from lib import config as cfg
-# import config as cfg
+#import config as cfg
 
 
 logger = getLogger('upd_dbs')
 # TODO: set to ERROR later on after setup
-logger.setLevel(INFO)
+logger.setLevel(DEBUG)
 
 file_formatter = Formatter('{asctime} {name} {levelname}: {message}', style='{')
 stream_formatter = Formatter('{message}', style='{')
@@ -24,7 +24,7 @@ today_date = today.strftime('%m-%d-%Y')
 # logfile
 file_handler = FileHandler('/opt/Software-Inventory/logs/software_inventory{}.log'
                            .format(today.strftime('%m%d%Y')))
-file_handler.setLevel(INFO)
+file_handler.setLevel(DEBUG)
 file_handler.setFormatter(file_formatter)
 
 # console
@@ -64,7 +64,7 @@ def upd_snipe_hw():
         total_record = content['total']
 
         if total_record == 0:
-            logger.info('No data in Snipe-IT')
+            logger.debug('No data in Snipe-IT')
             content = None
 
         for offset in range(0, total_record, 500):
@@ -149,7 +149,7 @@ def upd_snipe_lic():
     hardware_col = hard_db['snipe']
 
     try:
-        all_items = []
+        license_list = []
         seat_list = []
         url = cfg.api_url_soft_all
         response = requests.request("GET", url=url, headers=cfg.api_headers)
@@ -159,12 +159,12 @@ def upd_snipe_lic():
 
         # get total number of records and quit if none
         if total_record == 0:
-            logger.info('No License data in Snipe-IT')
+            logger.debug('No License data in Snipe-IT')
             content = None
             return content
 
         # for every 500 records in total license records
-        for offset in range(65, total_record, 500):   # should be 0 instead of 65
+        for offset in range(0, total_record, 500):   # should be total_record in second argument
             querystring = {"offset": offset}
             response2 = requests.request("GET",
                                          url=url,
@@ -172,19 +172,19 @@ def upd_snipe_lic():
                                          params=querystring)
             content2 = response2.json()
             count += 1
-            for item in content2['rows']:
+            for i, item in enumerate(content2['rows']):
                 # get all license information and add it to a dictionary
                 print('BEGIN LICENSE _______________________________________')
                 print(item['id'])
                 ct = 0
-                device = {'License ID': item['id'],
-                          'License Name': item['name'],
-                          'Total Seats': item['seats'],
-                          'Free Seats': item['free_seats_count'],
-                          'Date': today_date}
+                license = {'License ID': item['id'],
+                           'License Name': item['name'],
+                           'Total Seats': item['seats'],
+                           'Free Seats': item['free_seats_count'],
+                           'Date': today_date}
 
                 # append each dictionary of license information into list of licenses
-                all_items.append(device)
+                license_list.append(license)
 
                 url2 = cfg.api_url_soft_all_seats.format(item['id'])
 
@@ -228,17 +228,12 @@ def upd_snipe_lic():
 
                         seat_list.append(seat)
 
-                    print('LICENSE ', item['id'], 'seat count', ct)
                 if snipe_seat_col.count() > 0:
                     snipe_seat_col.delete_many({'license_id': item['id']})
-                deleted_test = snipe_seat_col.find_one({'license_id': item['id']})
-                print('is mongo deleted?')
-                print(deleted_test is None)
 
                 times = 0
                 for i in range(0, len(seat_list), 1000):
                     print('LICENSE ', item['id'], '********')
-                    print('count', times, 'i', i)
 
                     # pprint(seat_list[i:i + 1000])
 
@@ -252,23 +247,37 @@ def upd_snipe_lic():
                 seat_list = []
                 print('CT Seat amt ', ct)
 
-            # delete prior scan items
-            if snipe_lic_col.count() > 0:
-                snipe_lic_col.delete_many({})
+                # delete prior license scan items for each License ID
+                print(item['id'], type(item['id']))
+                print(snipe_lic_col.count({'License ID': item['id']}))
+                if snipe_lic_col.count({'License ID': item['id']}) > 0:
+                    snipe_lic_col.delete_many({'License ID': item['id']})
+                    logger.debug('deleted old license records for License ID {}'.format(item['id']))
+                # insert list of dictionaries
+                if snipe_lic_col.count({'License ID': item['id']}) == 0:
+                    snipe_lic_col.insert_many(license_list)
+                    logger.debug('licenses updated')
 
-            # insert list of dictionaries
-            snipe_lic_col.insert_many(all_items)
-            logger.debug('snipe db licenses updated')
+                print(snipe_lic_col.count({'License ID': item['id']}))
+                print(len(license_list))
+                if snipe_lic_col.count({'License ID': item['id']}) == len(license_list):
+                    logger.debug('License {} updated in MongoDB'.format(item['id']))
+                license_list = []
 
         # print(*all_items, sep='\n')
 
-        return all_items
+        return True
 
     except (KeyError,
             decoder.JSONDecodeError):
         content = None
         logger.exception('No response')
         return content
+
+
+def add_lic():
+    ''' Placeholder for function to add licenses to mongo individually'''
+    pass
 
 
 def upd_bx_hw():
