@@ -45,10 +45,10 @@ logger.addHandler(stream_handler)
 
 def main(asset_list):
     # Update databases first
-    #upd_dbs.upd_snipe_hw()
-    #upd_dbs.upd_bx_hw()
-    #upd_dbs.upd_bx_sw()
-    #upd_dbs.upd_snipe_lic()
+    # upd_dbs.upd_snipe_hw()
+    # upd_dbs.upd_bx_hw()
+    # upd_dbs.upd_bx_sw()
+    # upd_dbs.upd_snipe_lic()
 
     # create licenses
     create_lic()
@@ -205,7 +205,7 @@ def match_dbs(snipe_list):
     # soft_col = software_db['all_software']
 
     try:
-        # sleep in case the 
+        # sleep in case
         sleep(60)
         start = time()
         ct = 0
@@ -731,9 +731,6 @@ def create_lic():
     lic_col = software_db['snipe_lic']
     all_licenses = lic_col.find()
 
-    # Snipe Seats collection
-    snipe_seats = software_db['snipe_seat']
-
     software = list(software)
     all_licenses = list(all_licenses)
 
@@ -756,24 +753,24 @@ def create_lic():
             sleep(60)
             ct = 0
 
-        #if soft_str not in snipe_lic_list:
-            #print('ADDING LICENSE *******', item['sw'])
-        #else:
-            #print('UPDATING LICENSE #######', item['sw'])
+        # if soft_str not in snipe_lic_list:
+            # print('ADDING LICENSE *******', item['sw'])
+        # else:
+            # print('UPDATING LICENSE #######', item['sw'])
             # license collection from snipe
             license = lic_col.find_one({'License Name': soft_str},
                                        {'_id': 0, 'License Name': 1, 'License ID': 1, 'Total Seats': 1})
 
-            #if int(item['count']) + 500 >= int(license['Total Seats']) >= int(item['count']) + 100:
-             #   print('GOOD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
-                #continue
-            #else:
-             #   print('BAD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
-                #continue
+            # if int(item['count']) + 500 >= int(license['Total Seats']) >= int(item['count']) + 100:
+            #   print('GOOD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
+            # continue
+            # else:
+            #   print('BAD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
+            # continue
 
-        #print('NEXT')
-        #continue
-           
+        # print('NEXT')
+        # continue
+
         try:
 
             if soft_str not in snipe_lic_list:
@@ -803,23 +800,17 @@ def create_lic():
                                               'Date': today_date})
                     print(ins)
                     logger.debug('Added License {} to MongoDB'.format(soft_str))
-                
+
             else:
                 # license collection from snipe
                 license = lic_col.find_one({'License Name': soft_str},
                                            {'_id': 0, 'License Name': 1, 'License ID': 1, 'Total Seats': 1})
-       
+
                 if int(item['count']) + 500 >= int(license['Total Seats']) >= int(item['count']) + 100:
                     print('GOOD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
                     print(count)
                     continue
-       
-                #elif int(license['Total Seats']) > int(item['count']) + 500:
-                 #   print('There are more seats than there should be for license {}.\n'
-                  #        'There should be {} but there are {}. Review.'.format(license['License Name'],
-                   #                                                             int(item['count']) + 500,
-                                                                             #   license['Total Seats']))
-       
+
                 else:
                     print('UPDATING LICENSE #######', item['sw'])
                     print('BAD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
@@ -835,10 +826,10 @@ def create_lic():
                                                  data=payload,
                                                  headers=cfg.api_headers)
                     print(response2.text)
-       
+
                     content = response2.json()
                     status = str(content['status'])
-                    ct += 1    
+                    ct += 1
                     if status == 'success':
                         lic_col.update_one({'License ID': license['License ID']},
                                            {'$set': {'Total Seats': seat_amt}})
@@ -848,11 +839,10 @@ def create_lic():
                         print('Could not update license ', item['sw'])
 
         except UnicodeEncodeError:
-             sleep(120)
-             loger.exception('Decode error with software item {}'.format(soft_str))
-             print('Exception', exc_info=True)
-             print(count)
-
+            sleep(120)
+            logger.exception('Decode error with software item {}'.format(soft_str))
+            print('Exception', exc_info=True)
+            print(count)
 
 
 def inv_args():
