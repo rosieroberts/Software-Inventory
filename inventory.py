@@ -3,6 +3,7 @@
 
 import pymongo
 import requests
+import sys
 from pprint import pprint, pformat
 from json import decoder
 from re import compile
@@ -43,27 +44,48 @@ logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
 
-def main(asset_list):
-    # Update databases first
-    # upd_dbs.upd_snipe_hw()
-    # upd_dbs.upd_bx_hw()
-    # upd_dbs.upd_bx_sw()
-    # upd_dbs.upd_snipe_lic()
+def main(args):
 
-    # create licenses
-    create_lic()
+    if args:
+        assets = []
+        licenses = []
+        for item in args:
 
-    # add licenses to assets
-    # match_dbs(asset_list)
+            if item['func_type'] == 'asset':
+                assets.append(item['argument'])
 
-    # view number of licenses
-    # comp_nums()
+            if item['func_type'] == 'license':
+                licenses.append(item['argument'])
 
-    # api test
-    # api_call()
+        # Update databases first
+        upd_dbs.upd_snipe_hw()
+        # upd_dbs.upd_bx_hw()
+        # upd_dbs.upd_bx_sw()
 
-    # Thinking about removing this function, just increase the number of seats
-    # check_in(asset_list)
+        # create licenses
+        # create_lic()
+
+        if len(assets) > 0:
+            upd_dbs.upd_lic()
+            asset_list = get_asset_list(assets)
+            match_dbs(asset_list)
+        if len(licenses) > 0:
+            seat_info = upd_dbs.upd_lic(*licenses)
+            asset_lists = get_lic_list(licenses)
+            asset_list = asset_lists[0]
+            assets_not_found = asset_lists[1]
+            match_dbs(asset_list, *assets_not_found)
+
+    else:
+        # Update databases first
+        upd_dbs.upd_snipe_hw()
+        # upd_dbs.upd_bx_hw()
+        # upd_dbs.upd_bx_sw()
+
+        # create licenses
+        # create_lic()
+        upd_dbs.upd_lic()
+        match_dbs(get_asset_list(inv_args()))
 
 
 def get_asset_list(asset_list):
@@ -135,7 +157,91 @@ def get_asset_list(asset_list):
     return snipe_list
 
 
-def match_dbs(snipe_list):
+def get_lic_list(lic_list):
+    ''' Only runs when a list of licenses in provided in arguments
+        take list of licenses and return list of assets that are associated with that license
+        this function only runs when -l <licenseID> is added as an argument '''
+
+    client = pymongo.MongoClient("mongodb://localhost:27017/")
+    software_db = client['software_inventory']
+    asset_db = client['inventory']
+
+    # BigFix HW collection
+    # bigfix_hw = software_db['bigfix_hw']
+
+    # BigFix SW collection
+    # bigfix_sw = software_db['bigfix_sw']
+
+    # Snipe HW collection
+    snipe_hw = software_db['snipe_hw']
+
+    # Snipe Licenses collection
+    # snipe_lic = software_db['snipe_lic']
+
+    # Snipe Seats  collection
+    snipe_seats = software_db['snipe_seat']
+
+    # deleted assets collection
+    deleted = asset_db['deleted']
+
+    # unique software collection
+    # soft_col = software_db['all_software']
+
+    lic_rgx = compile(r'([\d]{1,3})')
+
+    print('FUNCTION get_lic_list')
+    print(lic_list)
+    if lic_list:
+        snipe_list = []
+        asset_not_found = []
+        d_ct = 0
+        ct = 0
+        f_ct = 0
+        for item in lic_list:
+            # for each license in list of licenses provided in command line
+            lic = lic_rgx.search(item)
+            if lic:
+                # make sure the input matches the license number regex and looks only for license with active assets
+                # seats with no assets associated with them will have a None in asset_name in the snipe_seats collection
+                lic_item = snipe_seats.find({'license_id': int(item), 'asset_name':{'$ne': None}})
+                lic_item = list(lic_item)
+                print('lic_item', lic_item)
+            else:
+                continue
+            if lic_item:
+                for seat in lic_item:
+                    snipe_item = snipe_hw.find_one({'Location': seat['location'], 'Hostname': seat['asset_name']})
+                    if snipe_item:
+                        # if there is a record of a an asset associated with this license, append the asset info to list
+                        snipe_list.append(snipe_item)
+                        f_ct += 1
+                    else:
+                        # if an asset has been deleted the asset info will be in the deleted collection in the 'inventory' mongodb
+                        # if there is a case where the asset was deleted but the seat is still checked out, this will return the asset info
+                        if seat['asset_name']:
+                            del_asset = deleted.find_one({'_snipeit_hostname_8': seat['asset_name']})
+                            if del_asset:
+                                d_ct += 1
+                                snipe_item = {'ID': del_asset['id'], 
+                                              'Asset Tag': del_asset['asset_tag'],
+                                              'IP': del_asset['_snipeit_ip_6'],
+                                              'Mac Address': del_asset['_snipeit_mac_address_7'],
+                                              'Location': del_asset['Location'],
+                                              'Hostname': del_asset['_snipeit_hostname_8']}
+                                snipe_list.append(snipe_item)
+                            else:
+                                ct += 1
+                                asset_not_found.append(seat)
+                                logger.debug('error, there is a seat associated to an asset not found. Review lic {} seat {}'
+                                             .format(item, seat['id']))
+                                continue
+                        else:
+                            continue
+    print('found {} assets, assets not found {}, found in deleted {} assets'.format(f_ct, ct, d_ct))
+    return snipe_list, asset_not_found
+
+
+def match_dbs(snipe_list, *asset_not_found):
     ''' Combine all information from all databases
         Snipe HW
         Snipe License
@@ -165,6 +271,17 @@ def match_dbs(snipe_list):
         "Manufacturer ID" : ,
         "Free Seats" : 8
 }
+> db.snipe_seat.findOne()
+{
+        "_id" : ObjectId("6288040562e2ed2894a9eb13"),
+        "id" : 439580,
+        "license_id" : 442,
+        "assigned_asset" : null,
+        "location" : null,
+        "seat_name" : "Seat 1",
+        "asset_name" : null,
+        "license_name" : "Microsoft Edge | 100.0.1185.36"
+}
 > db.bigfix_hw.findOne({})
 {
         "_id" : ,
@@ -179,9 +296,8 @@ def match_dbs(snipe_list):
         "sw" : ""
 
 '''
-    # upd_dbs.upd_snipe_lic()
     # create_lic()
-
+    # list of assets that could not be updated during script
     not_added = []
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
@@ -204,15 +320,26 @@ def match_dbs(snipe_list):
     # unique software collection
     # soft_col = software_db['all_software']
 
+    print('FUNCTION match_dbs')
+
     try:
         # sleep in case
         sleep(60)
         start = time()
         ct = 0
-        # list of assets that could not be updated during script
-        not_added = []
+        if len(snipe_list) == 0:
+            print('There are no assets in snipe_it list')
+ 
+        
+        asset_list = snipe_list
+        # assets associated with a license, but have been deleted from snipeIT
+        # seats associated with these assets need to be checked in
+        if asset_not_found:
+            deleted_asset_list = asset_not_found
+
         # for each asset in snipe_hw look up in mongodb big_fix_hw
-        for count, item in enumerate(snipe_list):
+        for count, item in enumerate(asset_list):
+            print('item', item)
             asset_id = item['ID']
             location = item['Location']
             comp_name = item['Hostname']
@@ -227,6 +354,7 @@ def match_dbs(snipe_list):
             #   bgfix_sw_list = bigfix_sw.find({'comp_name': item['Hostname']},
             #                                  {'sw': 1, 'comp_name': 1, '_id': 0})
 
+            # if asset is in bigfix_hw collection, not sure why I am checking the count here
             if bgfix_item and count >= 0:
                 print('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
                 print(count, item['Asset Tag'])
@@ -263,7 +391,6 @@ def match_dbs(snipe_list):
                         item_str = str({'asset_id': ''})
                         payload = item_str.replace('\'', '\"')
 
-                        print('PATCH REQUEST 1, remove seat for id {}, no asset found. '.format(i['id']))
                         logger.debug('PATCH REQUEST 1, remove seat for id {}, no asset found. '.format(i['id']))
                         response = requests.request("PATCH",
                                                     url=url,
@@ -281,7 +408,8 @@ def match_dbs(snipe_list):
                                 snipe_seats.update_one({'license_id': i['license_id'], 'id': i['id']},
                                                        {'$set': {'assigned_asset': None,
                                                                  'asset_name': None,
-                                                                 'location': None}})
+                                                                 'location': None,
+                                                                 'asset_tag': None}})
 
                                 lic = snipe_lic.find_one({'License ID': i['license_id']})
                                 if lic:
@@ -310,6 +438,9 @@ def match_dbs(snipe_list):
                             logger.debug('error, there was something wrong removing license from asset {}'.format(asset_id))
                             continue
 
+                    else:
+                        print('item found in bgfx')
+
                 # get list of license names in snipe
                 sp_sw_list = [ln['license_name'] for ln in snipe_sw_list]
 
@@ -317,20 +448,23 @@ def match_dbs(snipe_list):
                 not_in_bigfix_sw = list(filter(lambda i: i not in bf_sw_list, sp_sw_list))
 
                 if not_in_bigfix_sw:
-                    logger.debug('software not in BigFix, active in Snipe list length {}'.format(len(not_in_bigfix_sw)))
+                    logger.debug('amount of licenses not in BigFix, but active in Snipe - {}'.format(len(not_in_bigfix_sw)))
 
                 for itm in bgfix_sw_list:
                     software = itm['sw']
                     license = snipe_lic.find_one({'License Name': software},
                                                  {'License Name': 1, 'License ID': 1, 'Total Seats': 1, 'Free Seats': 1, '_id': 0})
+                    # if bigfix license is found in snipeIT
                     if license:
                         found_seat = snipe_seats.find_one({'assigned_asset': asset_id, 'license_id': license['License ID']},
                                                           {'id': 1, 'assigned_asset': 1, 'name': 1, 'location': 1, '_id': 0})
+                        # if seat was not found
                         if found_seat is None:
                             if int(license['Free Seats']) >= 1:
                                 # ***issues with snipe it, waiting for them to resolve before assigning seats to licenses***
                                 # issue will take a while to fix, seat names are not consistent with API, keep an eye on it
 
+                                # find an unassigned seat to check out asset
                                 seat = snipe_seats.find_one({'assigned_asset': None, 'license_id': license['License ID']},
                                                             {'id': 1, 'assigned_asset': 1, 'name': 1, 'location': 1, '_id': 0})
 
@@ -370,7 +504,8 @@ def match_dbs(snipe_list):
                                         snipe_seats.update_one({'license_id': license['License ID'], 'id': seat['id']},
                                                                {'$set': {'assigned_asset': asset_id,
                                                                          'asset_name': comp_name,
-                                                                         'location': location}})
+                                                                         'location': location,
+                                                                         'asset_tag': item['Asset Tag']}})
 
                                         free_seats = int(license['Free Seats']) - 1
                                         snipe_lic.update_one({'License ID': license['License ID']},
@@ -384,6 +519,8 @@ def match_dbs(snipe_list):
                                         if message == 'Target not found':
                                             logger.debug('Asset {} is not currently active, cannot update license'.format(asset_id))
                                             not_added.append(asset_id)
+                                            continue
+                                        else:
                                             continue
 
                                     else:
@@ -445,7 +582,8 @@ def match_dbs(snipe_list):
                                             snipe_seats.update_one({'license_id': seat['License ID'], 'id': seat['id']},
                                                                    {'$set': {'assigned_asset': None,
                                                                              'asset_name': None,
-                                                                             'location': None}})
+                                                                             'location': None,
+                                                                             'asset_tag': None}})
 
                                             snipe_lic.update_one({'License ID': lic['License ID']},
                                                                  {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
@@ -512,17 +650,15 @@ def match_dbs(snipe_list):
                             else:
                                 logger.debug('error, there was something wrong deleting license {}'.format(lic['License ID']))
                                 continue
-        logger.debug('number of items in snipe {}'.format(len(snipe_list)))
+        logger.debug('number of items in snipe {}'.format(len(asset_list)))
         end = time()
         logger.debug('runtime {}'.format(end - start))
         return not_added
 
     except(KeyError,
            decoder.JSONDecodeError):
-        logger.error('There was an error updating the licenses to Snipe-it, check licenses for asset:\n{}'
-                     .format(item), exc_info=True)
+        logger.error('There was an error updating the licenses to Snipe-it, check licenses for asset', exc_info=True)
         traceback.print_exc()
-        pprint(item)
         print('error')
 
 
@@ -846,7 +982,8 @@ def create_lic():
 
 
 def inv_args():
-    assets = []
+    list_iter = []
+    func_type = None
 
     parser = ArgumentParser(description='Software Inventory Script')
     parser.add_argument(
@@ -861,6 +998,10 @@ def inv_args():
         '-hostname', '-n',
         nargs='*',
         help='Hostname of the computer to get list of software')
+    parser.add_argument(
+        '-license', '-l',
+        nargs='*',
+        help='License ID of the license to update, limit 10 licenses.')
     inv_args = parser.parse_args()
 
     try:
@@ -872,12 +1013,15 @@ def inv_args():
                 if club_:
                     club_ = str(club_.group(0))
                     if len(item) == len(club_):
-                        assets.append(club_)
+                        arg = {'argument': club_,
+                               'func_type': 'asset'}
+                        list_iter.append(arg)
                     else:
                         logger.warning('{} is not in the right format, try again'.format(item))
                         continue
                 else:
                     logger.warning('{} is not in the right format, try again'.format(item))
+                    club_arg = False
                     continue
 
         if inv_args.assetTag:
@@ -887,7 +1031,9 @@ def inv_args():
                 if asset_tag:
                     asset_tag = str(asset_tag.group(0))
                     if len(item) == len(asset_tag):
-                        assets.append(asset_tag)
+                        arg = {'argument': asset_tag,
+                               'func_type': 'asset'}
+                        list_iter.append(arg)
                     else:
                         logger.warning('{} is not in the right format, try again'.format(item))
                         continue
@@ -897,12 +1043,17 @@ def inv_args():
 
         if inv_args.hostname:
             hostname_rgx = compile(r'[A-Z]{1,3}[PC]{1}\d{3}(-[\d]{1,2})*')
+            if len(inv_args.hostname) > 10:
+                logger.warning('error, entered more than 10 license arguments, try again'.format(item))
+                sys.exit()
             for item in inv_args.hostname:
                 hostname = hostname_rgx.search(item)
                 if hostname:
                     hostname = str(hostname.group(0))
                     if len(item) == len(hostname):
-                        assets.append(hostname)
+                        arg = {'argument': hostname,
+                               'func_type': 'asset'}
+                        list_iter.append(arg)
                     else:
                         logger.warning('{} is not in the right format, try again'.format(item))
                         continue
@@ -910,11 +1061,41 @@ def inv_args():
                     logger.warning('{} is not in the right format, try again'.format(item))
                     continue
 
-        if not inv_args.club and not inv_args.assetTag and not inv_args.hostname:
-            print('returning none_______________________________')
-            return None
+        if inv_args.license:
+            # as of now licenseIDs are not more than 3 digits, after a while licenseIDs will probably increase
+            # to 4 digits, if so, change the regex to r'([\d]{1,4})' and the len to 4 or less
+            license_rgx = compile(r'([\d]{1,3})')
+            for count, item in enumerate(inv_args.license):
+                # limit arguments to 10, otherwise upd_dbs.upd_seats() will not work properly
+                if len(item) <= 3 and count < 10:
+                    license = license_rgx.search(item)
+                    if license:
+                        license = str(license.group(0))
+                        if len(item) == len(license):
+                            arg = {'argument': license,
+                                   'func_type': 'license'}
+                            list_iter.append(arg)
+                        else:
+                            logger.warning('{} is not in the right format, try again'.format(item))
+                            continue
+                    else:
+                        logger.warning('{} is not in the right format, try again'.format(item))
+                        continue
+                else:
+                    if count >= 10:
+                        logger.warning('Too many license arguments, try again'.format(item))
+                    else:
+                        logger.warning('{} license ID has too many digits, try again'.format(item))
+                    continue
 
-        return assets
+        if not inv_args.club and not inv_args.assetTag and not inv_args.hostname and not inv_args.license:
+            return None
+        else:
+            if len(list_iter) > 0:
+                return list_iter
+            else:
+                logger.warning('error, the argument is not in the right format, exiting')
+                sys.exit()
 
     except(OSError, AttributeError):
         logger.critical('There was a problem getting all assets, try again', exc_info=True)
@@ -922,4 +1103,9 @@ def inv_args():
 
 
 if __name__ == '__main__':
-    main(get_asset_list(inv_args()))
+
+    try:
+        main(inv_args())
+
+    except(KeyError):
+        logger.critical('There was a problem getting all assets, try again', exc_info=True)
