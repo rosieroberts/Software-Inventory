@@ -70,7 +70,7 @@ def main(args):
             asset_list = get_asset_list(assets)
             match_dbs(asset_list)
         if len(licenses) > 0:
-            seat_info = upd_dbs.upd_lic(*licenses)
+            upd_dbs.upd_lic(*licenses)
             asset_lists = get_lic_list(licenses)
             asset_list = asset_lists[0]
             assets_not_found = asset_lists[1]
@@ -203,7 +203,7 @@ def get_lic_list(lic_list):
             if lic:
                 # make sure the input matches the license number regex and looks only for license with active assets
                 # seats with no assets associated with them will have a None in asset_name in the snipe_seats collection
-                lic_item = snipe_seats.find({'license_id': int(item), 'asset_name':{'$ne': None}})
+                lic_item = snipe_seats.find({'license_id': int(item), 'asset_name': {'$ne': None}})
                 lic_item = list(lic_item)
                 print('lic_item', lic_item)
             else:
@@ -222,7 +222,7 @@ def get_lic_list(lic_list):
                             del_asset = deleted.find_one({'_snipeit_hostname_8': seat['asset_name']})
                             if del_asset:
                                 d_ct += 1
-                                snipe_item = {'ID': del_asset['id'], 
+                                snipe_item = {'ID': del_asset['id'],
                                               'Asset Tag': del_asset['asset_tag'],
                                               'IP': del_asset['_snipeit_ip_6'],
                                               'Mac Address': del_asset['_snipeit_mac_address_7'],
@@ -329,13 +329,13 @@ def match_dbs(snipe_list, *asset_not_found):
         ct = 0
         if len(snipe_list) == 0:
             print('There are no assets in snipe_it list')
- 
-        
+
         asset_list = snipe_list
         # assets associated with a license, but have been deleted from snipeIT
         # seats associated with these assets need to be checked in
         if asset_not_found:
             deleted_asset_list = asset_not_found
+            print(deleted_asset_list)
 
         # for each asset in snipe_hw look up in mongodb big_fix_hw
         for count, item in enumerate(asset_list):
@@ -983,7 +983,6 @@ def create_lic():
 
 def inv_args():
     list_iter = []
-    func_type = None
 
     parser = ArgumentParser(description='Software Inventory Script')
     parser.add_argument(
@@ -1021,7 +1020,6 @@ def inv_args():
                         continue
                 else:
                     logger.warning('{} is not in the right format, try again'.format(item))
-                    club_arg = False
                     continue
 
         if inv_args.assetTag:
@@ -1044,7 +1042,7 @@ def inv_args():
         if inv_args.hostname:
             hostname_rgx = compile(r'[A-Z]{1,3}[PC]{1}\d{3}(-[\d]{1,2})*')
             if len(inv_args.hostname) > 10:
-                logger.warning('error, entered more than 10 license arguments, try again'.format(item))
+                logger.warning('error, entered more than 10 license arguments, try again')
                 sys.exit()
             for item in inv_args.hostname:
                 hostname = hostname_rgx.search(item)
@@ -1083,7 +1081,7 @@ def inv_args():
                         continue
                 else:
                     if count >= 10:
-                        logger.warning('Too many license arguments, try again'.format(item))
+                        logger.warning('Too many license arguments, try again')
                     else:
                         logger.warning('{} license ID has too many digits, try again'.format(item))
                     continue

@@ -1,5 +1,5 @@
 import pymongo
-import sys
+# import sys
 from json import loads, dumps
 import xmltodict
 import requests
@@ -8,10 +8,10 @@ from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from json import decoder
 from re import compile
 from datetime import date, datetime
-from pprint import pprint
+# from pprint import pprint
 from time import sleep
 from lib import config as cfg
-#import config as cfg
+# import config as cfg
 
 
 logger = getLogger('upd_dbs')
@@ -316,14 +316,13 @@ def upd_lic(*licenseID):
         arg_lic_list = []
 
         # get all current license information from mongo, pull out the license numbers to a list
-        mongo_lic_list = snipe_lic_col.find({},{'License ID': 1, '_id': 0})
+        mongo_lic_list = snipe_lic_col.find({}, {'License ID': 1, '_id': 0})
         mongo_lic_list = list(mongo_lic_list)
         mg_lic_lst = []
         sn_lic_lst = []
 
         for lic in mongo_lic_list:
             mg_lic_lst.append(lic['License ID'])
-
 
         # for every 500 records in total license records
         for offset in range(0, total_record, 500):   # should be total_record in second argument
@@ -338,7 +337,7 @@ def upd_lic(*licenseID):
             for i, item in enumerate(content2['rows']):
                 # get all license information and add it to a dictionary
                 ct = 0
-                snipe_upd_date = datetime.strptime(item['updated_at']['datetime'],'%Y-%m-%d %H:%M:%S')
+                snipe_upd_date = datetime.strptime(item['updated_at']['datetime'], '%Y-%m-%d %H:%M:%S')
                 license = {'License ID': item['id'],
                            'License Name': item['name'],
                            'Total Seats': item['seats'],
@@ -350,10 +349,9 @@ def upd_lic(*licenseID):
                 if snipe_lic_col.count({'License ID': item['id']}) > 0:
                     current_rec = snipe_lic_col.find_one({'License ID': item['id']},
                                                          {'_id': 0, 'Total Seats': 1, 'Free Seats': 1, 'Snipe Upd Date': 1})
-
+                    print(current_rec)
                     snipe_lic_col.delete_many({'License ID': item['id']})
                     # logger.debug('deleted old mongo license records for License ID {}'.format(item['id']))
-                        
                 # insert record
                 if snipe_lic_col.count({'License ID': item['id']}) == 0:
                     snipe_lic_col.insert(license)
@@ -364,11 +362,11 @@ def upd_lic(*licenseID):
                         ct += 1
 
                 seat_dict = {'id': item['id'],
-                             'seats': item['seats'], 
+                             'seats': item['seats'],
                              'lic_name': item['name']}
                 seat_info.append(seat_dict)
 
-                # if license argument is provided, only update seats for that license 
+                # if license argument is provided, only update seats for that license
                 if item['id'] in licenseID:
                     print('LICENSE ___ {}'.format(item['id']))
                     # upd_seats() is very slow, so only send licenses in arguments if provided
@@ -400,9 +398,9 @@ def upd_lic(*licenseID):
             # return only seat information for those licenses provided in args
             return arg_lic_list
 
-        # otherwise return all seat information 
+        # otherwise return all seat information
         return seat_info
-                
+
     except (KeyError,
             decoder.JSONDecodeError):
         logger.exception('error with function upd_lic()')
@@ -410,21 +408,21 @@ def upd_lic(*licenseID):
 
 
 def upd_seats(seat_info):
- 
+
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
- 
+
     # use database named "software_inventory"
     soft_db = myclient['software_inventory']
 
     # use database named "inventory"
     hard_db = myclient['inventory']
- 
+
     # use collection for hardware
     hardware_col = hard_db['snipe']
 
     # use collection for deleted hardware
     deleted_hw_col = hard_db['deleted']
- 
+
     # use collection for seats
     snipe_seat_col = soft_db['snipe_seat']
 
@@ -438,7 +436,7 @@ def upd_seats(seat_info):
     print('FUNCTION upd_seats')
 
     # get all current seat information from mongo, pull out the seat numbers to a list
-    mongo_seat_list = snipe_seat_col.find({},{'id': 1, '_id': 0})
+    mongo_seat_list = snipe_seat_col.find({}, {'id': 1, '_id': 0})
     mongo_seat_list = list(mongo_seat_list)
     mg_seat_lst = []
     sn_seat_lst = []
@@ -449,7 +447,7 @@ def upd_seats(seat_info):
     for item in seat_info:
         try:
             url2 = cfg.api_url_soft_all_seats.format(item['id'])
- 
+
             # for every 50 seats in total seats per license
             for offset2 in range(0, item['seats'], 50):
                 querystring = {'offset': offset2}
@@ -459,7 +457,6 @@ def upd_seats(seat_info):
                                              headers=cfg.api_headers,
                                              params=querystring)
                 content3 = response3.json()
- 
                 # sleep if number of requests is 90 to prevent errors
                 count += 1
                 if count == 90:
@@ -492,7 +489,7 @@ def upd_seats(seat_info):
                                 hostname = asset['_snipeit_hostname_8']
                             else:
                                 hostname = 'Not Found'
- 
+
                     seat = {'id': itm['id'],
                             'license_id': itm['license_id'],
                             'assigned_asset': assigned_asset,
@@ -505,7 +502,7 @@ def upd_seats(seat_info):
                     seat_list.append(seat)
 
             # count of current assets with license
-            asset_ct = software.find_one({'sw': item['lic_name']},{'_id': 0, 'count': 1})
+            asset_ct = software.find_one({'sw': item['lic_name']}, {'_id': 0, 'count': 1})
             if not asset_ct:
                 bigfix_asset_ct = 0
             else:
@@ -521,45 +518,45 @@ def upd_seats(seat_info):
             if len(seat_info) >= 1:      # after licenses are populated in snipe make it 10
                 for seat in seat_list:
                     sn_seat_lst.append(seat['id'])
- 
+
                 # see if the current list of mongo seats is no longer in snipe, and if not, remove from mongo
                 for mg_seat in mg_seat_lst:
                     if mg_seat not in sn_seat_lst:
-                        snipe_seat_col.delete_many({'id': mg_seat})                
+                        snipe_seat_col.delete_many({'id': mg_seat})
             times = 0
             for i in range(0, len(seat_list), 1000):
                 print('LICENSE ', item['id'], '********')
- 
                 # pprint(seat_list[i:i + 1000])
- 
+
                 times += 1
                 snipe_seat_col.insert_many(seat_list[i:i + 1000])
                 logger.info('Inserted seats for license {} into snipe seats collection'.format(item['id']))
- 
+
             logger.debug('snipe db seats updated')
             logger.info('Seat amount - {} for licenseID {}'.format(len(seat_list),       # delete this line
                                                                    item['id']))
             seat_list = []
 
             logger.info('Current assigned seats in mongo {} for licenseID {}'.format(snipe_seat_col.count({'license_id': item['id'],
-                                                                                                           'asset_name':{'$ne': None}}),
+                                                                                                           'asset_name': {'$ne': None}}),
                                                                                      item['id']))
             # if count of license seats currently in snipeIT does not match with current count in BigFix
-            if snipe_seat_col.count({'license_id': item['id'], 'asset_name':{'$ne': None}}) != bigfix_asset_ct:
-                # figure out what to do here, perhaps send the ones that do not match to a list to review... 
+            if snipe_seat_col.count({'license_id': item['id'], 'asset_name': {'$ne': None}}) != bigfix_asset_ct:
+                # figure out what to do here, perhaps send the ones that do not match to a list to review...
                 logger.info('LicenseID {} bigfix count does not match SnipeIT'.format(item['id']))
-                logger.info('license {}, assigned seats {}, ' 
+                logger.info('license {}, assigned seats {}, '
                             'current bigfix amount for license {}'.format(item['id'],
                                                                           snipe_seat_col.count({'license_id': item['id'],
-                                                                                                'asset_name':{'$ne': None}}),
+                                                                                                'asset_name': {'$ne': None}}),
                                                                           bigfix_asset_ct))
 
             else:
                 logger.info('LicenseID {} count in Snipe_IT matches BigFix'.format(item['id']))
-                logger.info(item['id'], snipe_seat_col.count({'license_id': item['id'],
-                                                              'asset_name':{'$ne': None}}),
-                                                               bigfix_asset_ct)
- 
+                logger.info(item['id'],
+                            snipe_seat_col.count({'license_id': item['id'],
+                                                  'asset_name': {'$ne': None}}),
+                            bigfix_asset_ct)
+
         except(KeyError,
                decoder.JSONDecodeError):
             logger.exception('Problem with adding seats')
@@ -829,5 +826,3 @@ if __name__ == '__main__':
     upd_snipe_lic()
     upd_lic()
     upd_seats([])
-
-
