@@ -850,7 +850,7 @@ def create_lic():
        if not already added'''
 
     snipe_lic_list = []
-    
+
     print('FUNCTION create_lic')
 
     client = pymongo.MongoClient("mongodb://localhost:27017/")
