@@ -57,6 +57,7 @@ def upd_snipe_hw():
         Location
 
     """
+    print('FUNCTION upd_snipe_hw')
 
     try:
         all_items = []
@@ -110,166 +111,6 @@ def upd_snipe_hw():
         logger.debug('snipe db updated')
 
         return all_items
-
-    except (KeyError,
-            decoder.JSONDecodeError):
-        content = None
-        logger.exception('No response')
-        return content
-
-
-def upd_snipe_lic():
-    """Returns all current license information in snipe
-    and updates mongodb collection snipe_lic
-
-    Args:
-        None
-
-    Returns:
-        License ID
-        License Name
-        Total Seats
-        Manufacturer
-
-    """
-
-    myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-
-    # use database named "software_inventory"
-    soft_db = myclient['software_inventory']
-
-    # use database named "inventory"
-    hard_db = myclient['inventory']
-
-    # use collection named "snipe"
-    snipe_lic_col = soft_db['snipe_lic']
-
-    # use collection for seats
-    snipe_seat_col = soft_db['snipe_seat']
-
-    # use collection for hardware
-    hardware_col = hard_db['snipe']
-
-    print('FUNCTION upd_snipe_lic')
-
-    try:
-        license_list = []
-        seat_list = []
-        url = cfg.api_url_soft_all
-        response = requests.request("GET", url=url, headers=cfg.api_headers)
-        content = response.json()
-        total_record = content['total']
-        count = 0
-
-        # get total number of records and quit if none
-        if total_record == 0:
-            logger.debug('No License data in Snipe-IT')
-            content = None
-            return content
-
-        # for every 500 records in total license records
-        for offset in range(0, total_record, 500):   # should be total_record in second argument
-            querystring = {"offset": offset}
-            response2 = requests.request("GET",
-                                         url=url,
-                                         headers=cfg.api_headers,
-                                         params=querystring)
-            content2 = response2.json()
-            count += 1
-            for i, item in enumerate(content2['rows']):
-                # get all license information and add it to a dictionary
-                print('LICENSE ___ {}'.format(item['id']))
-                ct = 0
-                license = {'License ID': item['id'],
-                           'License Name': item['name'],
-                           'Total Seats': item['seats'],
-                           'Free Seats': item['free_seats_count'],
-                           'Date': today_date}
-
-                # append each dictionary of license information into list of licenses
-                license_list.append(license)
-
-                url2 = cfg.api_url_soft_all_seats.format(item['id'])
-
-                # for every 50 seats in total seats per license
-                for offset2 in range(0, item['seats'], 50):
-                    querystring = {'offset': offset2}
-                    # get seat information from snipe-it and add to mongodb
-                    response3 = requests.request("GET",
-                                                 url=url2,
-                                                 headers=cfg.api_headers,
-                                                 params=querystring)
-                    content3 = response3.json()
-
-                    # sleep if number of requests is 90 to prevent errors
-                    count += 1
-                    if count == 90:
-                        sleep(60)
-                        count = 0
-                    for itm in content3['rows']:
-                        ct += 1
-                        if itm['assigned_asset'] is None:
-                            assigned_asset = None
-                            location = None
-                            hostname = None
-                        else:
-                            assigned_asset = itm['assigned_asset']['id']
-                            location = itm['location']['name']
-                            asset = hardware_col.find_one({'ID': assigned_asset},
-                                                          {'Hostname': 1, '_id': 0})
-                            if asset:
-                                hostname = asset['Hostname']
-
-                        seat = {'id': itm['id'],
-                                'license_id': itm['license_id'],
-                                'assigned_asset': assigned_asset,
-                                'location': location,
-                                'seat_name': itm['name'],
-                                'asset_name': hostname,
-                                'license_name': item['name'],
-                                'date': today_date}
-
-                        seat_list.append(seat)
-
-                if snipe_seat_col.count() > 0:
-                    snipe_seat_col.delete_many({'license_id': item['id']})
-
-                times = 0
-                for i in range(0, len(seat_list), 1000):
-                    print('LICENSE ', item['id'], '********')
-
-                    # pprint(seat_list[i:i + 1000])
-
-                    times += 1
-                    # print(i)
-                    snipe_seat_col.insert_many(seat_list[i:i + 1000])
-                    print('Inserted seats for license {} into snipe seats collection'.format(item['id']))
-
-                logger.debug('snipe db seats updated')
-                print('FINAL len seat_list ', len(seat_list))
-                seat_list = []
-                print('CT Seat amt ', ct)
-
-                # delete prior license scan items for each License ID
-                print(item['id'], type(item['id']))
-                print(snipe_lic_col.count({'License ID': item['id']}))
-                if snipe_lic_col.count({'License ID': item['id']}) > 0:
-                    snipe_lic_col.delete_many({'License ID': item['id']})
-                    logger.debug('deleted old mongo license records for License ID {}'.format(item['id']))
-                # insert list of dictionaries
-                if snipe_lic_col.count({'License ID': item['id']}) == 0:
-                    snipe_lic_col.insert_many(license_list)
-                    logger.debug('licenses updated')
-
-                print(snipe_lic_col.count({'License ID': item['id']}))
-                print(len(license_list))
-                if snipe_lic_col.count({'License ID': item['id']}) == len(license_list):
-                    logger.debug('License {} updated in MongoDB'.format(item['id']))
-                license_list = []
-
-        # print(*all_items, sep='\n')
-
-        return True
 
     except (KeyError,
             decoder.JSONDecodeError):
@@ -574,6 +415,7 @@ def upd_bx_hw():
         Mac Address
 
     """
+    print('FUNCTION upd_bx_hw')
 
     try:
         # get computer name, IP, Mac Address
@@ -667,6 +509,7 @@ def upd_bx_sw():
         Software Name
 
     """
+    print('FUNCTION upd_bx_sw')
 
     try:
         # get computer name, IP, Mac Address
@@ -759,7 +602,6 @@ def upd_bx_sw():
         logger.debug('bigfix software updated')
 
         # get amount of seats(instances) for each license(software)
-
         soft_count = {i: all_software.count(i) for i in all_software}
 
         soft_count_list = []
@@ -823,6 +665,5 @@ if __name__ == '__main__':
     upd_snipe_hw()
     upd_bx_hw()
     upd_bx_sw()
-    upd_snipe_lic()
     upd_lic()
     upd_seats([])
