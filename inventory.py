@@ -79,18 +79,20 @@ def main(args):
     else:
         # Update databases first
         upd_dbs.upd_snipe_hw()
-        # upd_dbs.upd_bx_hw()
-        # upd_dbs.upd_bx_sw()
+        upd_dbs.upd_bx_hw()
+        upd_dbs.upd_bx_sw()
 
         # create licenses
-        # create_lic()
-        upd_dbs.upd_lic()
+        create_lic()
+        # upd_dbs.upd_lic()
         match_dbs(get_asset_list(inv_args()))
 
 
 def get_asset_list(asset_list):
     # takes in list of asset hostnames, club, asset_tag, and returns list from snipe_hw db
     # if no arguments, returns full list of all hosts that have software sorted
+
+    print('FUNCTION get_asset_list')
 
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
@@ -663,6 +665,9 @@ def match_dbs(snipe_list, *asset_not_found):
 
 
 def comp_nums():
+    # get final amounts of licenses/seats for verification
+
+    print('FUNCTION comp_nums')
     client = pymongo.MongoClient("mongodb://localhost:27017/")
 
     software_db = client['software_inventory']
@@ -759,20 +764,6 @@ def comp_nums():
                     else:
                         not_found2.append(item2)
 
-    # print('FOUND DIFF IP BIGFIX')
-    # pprint(found_mac)
-    # print('______________________________________________________')
-    # print('FOUND DIFF IP SNIPE')
-    # pprint(snipe_fmac)
-    # print('______________________________________________________')
-    # print('FOUND DIFF IP DELETED BIGFIX')
-    # pprint(found_deleted_mac)
-    # print('______________________________________________________')
-    # print('FOUND DIFF IP DELETED SNIPE')
-    # pprint(found_del_snipe_mac)
-    # print('______________________________________________________')
-    # print('NOT FOUND')
-    # pprint(not_found)
     print('______________________________________________________')
     print('HOST FOUND')
     pprint(found_host_sw)
@@ -790,6 +781,7 @@ def comp_nums():
 
 
 def api_call():
+    # for testing
     # license ID and seat id
     url = cfg.api_url_software_seat.format('3', '1999')
     # asset ID
@@ -806,6 +798,8 @@ def check_in(snipe_list):
     # check in seats for each asset in list of snipe assets
     # use this when deleting an item from snipe it.
     # might add this to the inventory script
+
+    print('FUNCTION check_in')
     id_list = []
 
     if snipe_list is None:
@@ -852,9 +846,12 @@ def check_in(snipe_list):
 
 
 def create_lic():
-    '''gets total list of unique licenses and adds them to snipe it if not already added'''
+    '''gets total list of unique licenses and adds them to snipe it
+       if not already added'''
 
     snipe_lic_list = []
+    
+    print('FUNCTION create_lic')
 
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
@@ -889,24 +886,41 @@ def create_lic():
             sleep(60)
             ct = 0
 
-        # if soft_str not in snipe_lic_list:
-            # print('ADDING LICENSE *******', item['sw'])
-        # else:
-            # print('UPDATING LICENSE #######', item['sw'])
+        # testing without pushing to API
+        if soft_str not in snipe_lic_list:
+            print('ADDING LICENSE *******', item['count'], item['sw'])
+            seat_amt = int(item['count']) + 500
+            item_str = str({'name': soft_str,
+                            'seats': seat_amt,
+                            'category_id': '11'})
+            print(item_str)
+        else:
+            print('UPDATING LICENSE #######', item['sw'])
             # license collection from snipe
             license = lic_col.find_one({'License Name': soft_str},
-                                       {'_id': 0, 'License Name': 1, 'License ID': 1, 'Total Seats': 1})
+                                       {'_id': 0,
+                                        'License Name': 1,
+                                        'License ID': 1,
+                                        'Total Seats': 1})
 
-            # if int(item['count']) + 500 >= int(license['Total Seats']) >= int(item['count']) + 100:
-            #   print('GOOD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
-            # continue
-            # else:
-            #   print('BAD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
-            # continue
+            if int(item['count']) + 500 >= int(license['Total Seats']) >= int(item['count']) + 100:
+                print('AMOUNT SEATS IS CORRECT for license ID {} bg count {}, mongo ct {} '
+                      .format(license['License ID'],
+                              int(item['count']) + 500,
+                              license['Total Seats']))
+                continue
+            else:
+                print('AMOUNT SEATS IS NOT CORRECT for license ID {} bg count {}, mongo ct {} '
+                      .format(license['License ID'],
+                              int(item['count']) + 500,
+                              license['Total Seats']))
+                continue
 
-        # print('NEXT')
-        # continue
+        print('NEXT')
+        continue
 
+        # purposely avoiding the lines below during testing,
+        # not wanting to push to snipe API yet
         try:
 
             if soft_str not in snipe_lic_list:
@@ -915,7 +929,9 @@ def create_lic():
                 # url for snipe-it licenses
                 url = cfg.api_url_soft_all
                 seat_amt = int(item['count']) + 500
-                item_str = str({'name': soft_str, 'seats': seat_amt, 'category_id': '11'})
+                item_str = str({'name': soft_str,
+                                'seats': seat_amt,
+                                'category_id': '11'})
                 payload = item_str.replace('\'', '\"')
                 response = requests.request("POST",
                                             url=url,
@@ -940,7 +956,10 @@ def create_lic():
             else:
                 # license collection from snipe
                 license = lic_col.find_one({'License Name': soft_str},
-                                           {'_id': 0, 'License Name': 1, 'License ID': 1, 'Total Seats': 1})
+                                           {'_id': 0,
+                                            'License Name': 1,
+                                            'License ID': 1,
+                                            'Total Seats': 1})
 
                 if int(item['count']) + 500 >= int(license['Total Seats']) >= int(item['count']) + 100:
                     print('GOOD! license ID {} bg count {}, mongo ct {} '.format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
