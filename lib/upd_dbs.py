@@ -24,7 +24,7 @@ today = date.today()
 today_date = today.strftime('%Y-%m-%d')
 
 # logfile
-file_handler = FileHandler('/opt/Software-Inventory/logs/software_inventory{}.log'
+file_handler = FileHandler('/opt/Software_Inventory/logs/software_inventory{}.log'
                            .format(today.strftime('%m%d%Y')))
 file_handler.setLevel(DEBUG)
 file_handler.setFormatter(file_formatter)
@@ -514,12 +514,19 @@ def upd_bx_sw():
     try:
         # get computer name, IP, Mac Address
         software_response = cfg.response
+        software_response2 = cfg.response2
 
         soft_response = software_response.text
+        soft_response2 = software_response2.text
 
         # Adding response to file
         with open('software.txt', 'w') as f:
             f.write(soft_response)
+
+        # Adding response to file, this is for corporate laptops, looking for putty.exe
+        with open('software2.txt', 'w') as f:
+            f.write(soft_response2)
+
         print('software updated')
         file_ = open('software.txt', 'rb')
         tests = dumps(xmltodict.parse(file_))
