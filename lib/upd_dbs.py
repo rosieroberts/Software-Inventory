@@ -57,7 +57,7 @@ def upd_snipe_hw():
         Location
 
     """
-    print('FUNCTION upd_snipe_hw')
+    logger.debug('FUNCTION upd_snipe_hw')
 
     try:
         all_items = []
@@ -135,7 +135,7 @@ def upd_lic(*licenseID):
     # use collection named "snipe"
     snipe_lic_col = soft_db['snipe_lic']
 
-    print('FUNCTION upd_lic')
+    logger.debug('FUNCTION upd_lic')
 
     try:
         # get count of licenses in snipeIT
@@ -190,17 +190,18 @@ def upd_lic(*licenseID):
                 if snipe_lic_col.count({'License ID': item['id']}) > 0:
                     current_rec = snipe_lic_col.find_one({'License ID': item['id']},
                                                          {'_id': 0, 'Total Seats': 1, 'Free Seats': 1, 'Snipe Upd Date': 1})
-                    print(current_rec)
+                    logger.debug(current_rec)
                     snipe_lic_col.delete_many({'License ID': item['id']})
-                    # logger.debug('deleted old mongo license records for License ID {}'.format(item['id']))
+                    logger.debug('deleted old mongo license records for License ID {}'.format(item['id']))
                 # insert record
                 if snipe_lic_col.count({'License ID': item['id']}) == 0:
                     snipe_lic_col.insert(license)
-                    # logger.debug('license {} updated'.format(item['id']))
+                    logger.debug('license {} updated'.format(item['id']))
                     if snipe_lic_col.count({'License ID': item['id']}) != 1:
                         logger.debug('License collection not updated in MongoDB')
                     else:
                         ct += 1
+                        logger.debug('License collection updated in MongoDB count {}'.format(ct))
 
                 seat_dict = {'id': item['id'],
                              'seats': item['seats'],
@@ -209,7 +210,7 @@ def upd_lic(*licenseID):
 
                 # if license argument is provided, only update seats for that license
                 if item['id'] in licenseID:
-                    print('LICENSE ___ {}'.format(item['id']))
+                    logger.debug('LICENSE ___ {}'.format(item['id']))
                     # upd_seats() is very slow, so only send licenses in arguments if provided
                     upd_seats([seat_dict])
                     arg_lic_list.append(seat_dict)
@@ -228,7 +229,7 @@ def upd_lic(*licenseID):
         # this function takes hours to run
         if not licenseID:
             logger.debug('License count {}'.format(ct))
-            upd_seats(seat_info)
+            #upd_seats(seat_info)
         # if there was a license argument provided
         else:
             for itm in licenseID:
@@ -274,7 +275,7 @@ def upd_seats(seat_info):
 
     asset_tag_rgx = compile(r'([0-9]{3}[A-Z]{1}-[A-Za-z0-9]{4})')
 
-    print('FUNCTION upd_seats')
+    logger.debug('FUNCTION upd_seats')
 
     # get all current seat information from mongo, pull out the seat numbers to a list
     mongo_seat_list = snipe_seat_col.find({}, {'id': 1, '_id': 0})
@@ -351,12 +352,12 @@ def upd_seats(seat_info):
 
             logger.info('BigFix asset_ct {} for software {}'.format(bigfix_asset_ct, item['id']))
             if snipe_seat_col.count({'license_id': item['id']}) > 0:
-                print(snipe_seat_col.count({'license_id': item['id']}), item['id'])
+                logger.debug(snipe_seat_col.count({'license_id': item['id']}), item['id'])
                 snipe_seat_col.delete_many({'license_id': item['id']})
 
             # if there are more than 10 licenses being updated,
             # means that no arguments were used and all seats are getting updated
-            if len(seat_info) >= 1:      # after licenses are populated in snipe make it 10
+            if len(seat_info) >= 10:
                 for seat in seat_list:
                     sn_seat_lst.append(seat['id'])
 
@@ -366,7 +367,7 @@ def upd_seats(seat_info):
                         snipe_seat_col.delete_many({'id': mg_seat})
             times = 0
             for i in range(0, len(seat_list), 1000):
-                print('LICENSE ', item['id'], '********')
+                print('LICENSE {} *********'.format(item['id']))
                 # pprint(seat_list[i:i + 1000])
 
                 times += 1
@@ -415,7 +416,7 @@ def upd_bx_hw():
         Mac Address
 
     """
-    print('FUNCTION upd_bx_hw')
+    logger.debug('FUNCTION upd_bx_hw')
 
     try:
         # get computer name, IP, Mac Address
@@ -509,7 +510,7 @@ def upd_bx_sw():
         Software Name
 
     """
-    print('FUNCTION upd_bx_sw')
+    logger.debug('FUNCTION upd_bx_sw')
 
     try:
         # get computer name, IP, Mac Address
@@ -527,7 +528,7 @@ def upd_bx_sw():
         with open('software2.txt', 'w') as f:
             f.write(soft_response2)
 
-        print('software updated')
+        logger.debug('software updated')
         file_ = open('software.txt', 'rb')
         tests = dumps(xmltodict.parse(file_))
         tests = loads(tests)

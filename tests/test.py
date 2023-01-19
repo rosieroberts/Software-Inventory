@@ -155,7 +155,7 @@ class TestInventory:
         # licenses that could not be updated, due to asset not being available
         not_added = match[2]
         # licenses that could not be updated due to no free seats
-        not_added_2 = match[3]
+        not_free_seats = match[3]
 
 
         if len(api) > 0 and len(mongo) > 0:
@@ -174,22 +174,31 @@ class TestInventory:
                                 assert itm['asset_id'] == asset_id
                                 assert itm['asset_tag'] == asset_tag
                                 assert itm['asset_name'] == asset_name
+                    if dct['status'] == 'error':
+                        
 
                 if dct['type'] == 'remove seat':
                     if dct['status'] == 'success':
                         for item in mongo:
-                            if itm['license_id'] == license_id:
-                                assert itm['seat_id'] == seat_id
-                                assert itm['asset_id'] == None
-                                assert itm['asset_tag'] == None
-                                assert itm['location'] == None
-                                assert itm['asset_tag'] == None
-                                assert itm['asset_name'] == None
+                            if item['license_id'] == license_id:
+                                assert item['seat_id'] == seat_id
+                                assert item['asset_id'] == None
+                                assert item['asset_tag'] == None
+                                assert item['location'] == None
+                                assert item['asset_tag'] == None
+                                assert item['asset_name'] == None
 
                 if dct['type'] == 'remove_license':
                     if dct['status'] == 'success':
                         for i in mongo:
-                            pass
+                            if i['license_id'] == license_id:
+                                assert i['seat_id'] == None
+                                assert i['seat_license_id'] == None
+                                assert i['asset_id'] == None
+                                assert i['asset_tag'] == None
+                                assert i['location'] == None                       
+                                assert i['asset_tag'] == None
+                                assert i['asset_name'] == None
 
                 if dct['status'] == 'error':
                     assert not_added > 0
