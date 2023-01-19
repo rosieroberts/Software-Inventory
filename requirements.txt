@@ -70,7 +70,7 @@ netaddr==0.8.0
 netmiko==3.4.0
 nmap==0.0.1
 ntc-templates==2.0.0
-numpy==1.15.0
+numpy==1.22.0
 packaging==19.2
 pandas==0.23.3
 paramiko==2.10.1
