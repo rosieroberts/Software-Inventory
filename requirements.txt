@@ -106,7 +106,7 @@ pytest-mongodb==2.2.0
 pytest-runner==5.2
 python-dateutil==2.6.1
 python-dev-tools==2019.11.4
-python-ldap==3.2.0
+python-ldap==3.4.0
 python-nmap==0.6.4
 python3-netsnmp==1.1a1
 pytz==2018.5
