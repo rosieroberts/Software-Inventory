@@ -2,14 +2,12 @@
 
 import pytest
 import Software_Inventory.inventory as inv
-import lib.upd_dbs as upd
-from lib.inv_mail import send_mail
-import lib.config as cfg
+# import lib.upd_dbs as upd
+# from lib.inv_mail import send_mail
+# import lib.config as cfg
 from re import compile
 from datetime import date
-from pprint import pprint
-from time import time, ctime
-import random
+# from time import time, ctime
 import pymongo
 from logging import (
     FileHandler,
@@ -57,7 +55,7 @@ ip_regex = compile(r'(?:\d+\.){3}\d+')
 
 @pytest.fixture()
 def get_club():
-    club = list(snipe_hw.aggregate([{'$sample': {'size': 1}}, {'$project':{'Location': 1, '_id':0}}]))
+    club = list(snipe_hw.aggregate([{'$sample': {'size': 1}}, {'$project': {'Location': 1, '_id': 0}}]))
     club = club[0]['Location']
     print(club)
     return club
@@ -65,7 +63,7 @@ def get_club():
 
 @pytest.fixture()
 def get_assettag():
-    asset_tag = list(snipe_hw.aggregate([{'$sample': {'size': 1}}, {'$project':{'Asset Tag': 1, '_id':0}}]))
+    asset_tag = list(snipe_hw.aggregate([{'$sample': {'size': 1}}, {'$project': {'Asset Tag': 1, '_id': 0}}]))
     asset_tag = asset_tag[0]['Asset Tag']
     print(asset_tag)
     return asset_tag
@@ -73,7 +71,7 @@ def get_assettag():
 
 @pytest.fixture()
 def get_hostname():
-    hostname = list(snipe_hw.aggregate([{'$sample': {'size': 1}}, {'$project':{'Hostname': 1, '_id':0}}]))
+    hostname = list(snipe_hw.aggregate([{'$sample': {'size': 1}}, {'$project': {'Hostname': 1, '_id': 0}}]))
     hostname = hostname[0]['Hostname']
     print(hostname)
     return hostname
@@ -82,7 +80,7 @@ def get_hostname():
 @pytest.fixture
 def get_license():
     print('***')
-    license = list(snipe_lic.aggregate([{'$sample': {'size': 1}}, {'$project':{'License ID': 1, '_id': 0}}]))
+    license = list(snipe_lic.aggregate([{'$sample': {'size': 1}}, {'$project': {'License ID': 1, '_id': 0}}]))
     print(license)
     if len(license) > 0:
         license = license[0]['License ID']
@@ -93,13 +91,13 @@ def get_license():
 def get_assets(get_club, get_assettag, get_hostname):
     asset_list = inv.get_asset_list([get_club, get_assettag, get_hostname])
     print('ASSET LIST')
-    #print(asset_list)
+    # print(asset_list)
     return asset_list
 
 
 @pytest.fixture
 def get_lic_assets(get_license):
-    #asset_lic_list = inv.get_lic_list([get_license])
+    # asset_lic_list = inv.get_lic_list([get_license])
     # no licenses are currently in mongo, return empty list
     asset_lic_list = []
     print('LICENSE ASSET LIST')
@@ -113,7 +111,7 @@ def match(get_assets, get_lic_assets):
     results = inv.match_dbs(get_assets)
     print(results)
     # added this line to see the test, it will fail.
-    #results['License']
+    # results['License']
     return results
 
 
@@ -126,8 +124,9 @@ class TestUpdDbs:
     def test_2(self):
         pass
 
+
 class TestInventory:
-    """Test class for Inventory 
+    """Test class for Inventory
 
     # tests for inventory.py
 
@@ -148,15 +147,14 @@ class TestInventory:
 
     # match_dbs
     def test_2(self, match):
-        # all api calls info 
+        # all api calls info
         api = match[0]
         # all current mongo info after updates
         mongo = match[1]
         # licenses that could not be updated, due to asset not being available
         not_added = match[2]
         # licenses that could not be updated due to no free seats
-        not_free_seats = match[3]
-
+        # not_free_seats = match[3]
 
         if len(api) > 0 and len(mongo) > 0:
             for dct in api:
@@ -175,41 +173,41 @@ class TestInventory:
                                 assert itm['asset_tag'] == asset_tag
                                 assert itm['asset_name'] == asset_name
                     if dct['status'] == 'error':
-                        
+                        pass
 
                 if dct['type'] == 'remove seat':
                     if dct['status'] == 'success':
                         for item in mongo:
                             if item['license_id'] == license_id:
                                 assert item['seat_id'] == seat_id
-                                assert item['asset_id'] == None
-                                assert item['asset_tag'] == None
-                                assert item['location'] == None
-                                assert item['asset_tag'] == None
-                                assert item['asset_name'] == None
+                                assert item['asset_id'] is None
+                                assert item['asset_tag'] is None
+                                assert item['location'] is None
+                                assert item['asset_tag'] is None
+                                assert item['asset_name'] is None
 
                 if dct['type'] == 'remove_license':
                     if dct['status'] == 'success':
                         for i in mongo:
                             if i['license_id'] == license_id:
-                                assert i['seat_id'] == None
-                                assert i['seat_license_id'] == None
-                                assert i['asset_id'] == None
-                                assert i['asset_tag'] == None
-                                assert i['location'] == None                       
-                                assert i['asset_tag'] == None
-                                assert i['asset_name'] == None
+                                assert i['seat_id'] is None
+                                assert i['seat_license_id'] is None
+                                assert i['asset_id'] is None
+                                assert i['asset_tag'] is None
+                                assert i['location'] is None
+                                assert i['asset_tag'] is None
+                                assert i['asset_name'] is None
 
                 if dct['status'] == 'error':
                     assert not_added > 0
                     assert dct['asset_id'] in not_added
-                else:    
+                else:
                     assert len(not_added) == 0
 
     # comp_nums
     def test_3(self):
         pass
-    
+
     # test for each key in results from club_scan
     def test_4(self):
         pass
@@ -221,6 +219,7 @@ class TestInventory:
     # mongo locations test
     def test_6(self):
         pass
+
 
 class TestInvMail:
     """Test for mail_inv"""
