@@ -175,7 +175,7 @@ class TestInventory:
                                 assert itm['asset_tag'] == asset_tag
                                 assert itm['asset_name'] == asset_name
                     if dct['status'] == 'error':
-                        
+                        pass                       
 
                 if dct['type'] == 'remove seat':
                     if dct['status'] == 'success':
