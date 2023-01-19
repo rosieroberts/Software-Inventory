@@ -20,7 +20,7 @@ A script to inventory all software installed in all club computers and update So
 >-a, --assetTag (computer snipe asset tag) scans specific computers
 >`$ python3 inventory.py -a C163-XXXX`
 
-stname (hostname) scans specific computers
+>-n, --hostname (hostname) scans specific computers
 >`$ python3 inventory.py -n CMP000`
 
 >-l, --license (software license ID) scans specific licenses
