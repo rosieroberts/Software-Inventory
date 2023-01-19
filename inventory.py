@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 import pymongo
 import requests
 import sys
@@ -646,7 +645,7 @@ def match_dbs(snipe_list, *asset_not_found):
                             # if seats are checked out, check them in and update snipe_db if check in was successful
                             if out_seats:
                                 for seat in out_seats:
-                                    logger.dbug('________________________________')
+                                    logger.debug('________________________________')
                                     logger.debug('check in seat')
 
                                     # check in seats by sending a '' string for the asset_id field
