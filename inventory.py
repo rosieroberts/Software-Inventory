@@ -77,8 +77,8 @@ def main(args):
     else:
         # Update databases first
         upd_dbs.upd_snipe_hw()
-        #upd_dbs.upd_bx_hw()
-        #upd_dbs.upd_bx_sw()
+        # upd_dbs.upd_bx_hw()
+        # upd_dbs.upd_bx_sw()
 
         # create licenses
         create_lic()
@@ -427,9 +427,9 @@ def match_dbs(snipe_list, *asset_not_found):
                                                                  'location': None,
                                                                  'asset_tag': None,
                                                                  'date': today_date}})
-
+                                free_seats = snipe_lic.find_one({'License ID': i['license_id']}, {'_id': 0, 'Free Seats': 1})
                                 snipe_lic.update_one({'License ID': i['license_id']},
-                                                     {'$set': {'Free Seats': int(lic['Free Seats']) + 1}})
+                                                     {'$set': {'Free Seats': int(free_seats) + 1}})
 
                                 logger.debug('UPDATED FREE SEATS IN MONGO 1')
                                 # updated instance of lic with updated free seat numbers if it was updated
@@ -441,13 +441,13 @@ def match_dbs(snipe_list, *asset_not_found):
                                     mongo_test_dict_1 = {'license_id': mongo_upd_lic_1['License ID'],
                                                          'license_id_name': mongo_upd_lic_1['License Name'],
                                                          'total_seats': mongo_upd_lic_1['Total Seats'],
-                                                         'free_seats': mongo_upd_lic_1['Free Seats'],   
+                                                         'free_seats': mongo_upd_lic_1['Free Seats'],
                                                          'seat_license_id': mongo_upd_seat_1['license_id'],
                                                          'seat_id': mongo_upd_seat_1['id'],
                                                          'seat_lic_name': mongo_upd_seat_1['license_name'],
                                                          'assigned_asset': mongo_upd_seat_1['assigned_asset'],
                                                          'asset_tag': mongo_upd_seat_1['asset_tag'],
-                                                         'asset_name': mongo_upd_seat_1['asset_name'], 
+                                                         'asset_name': mongo_upd_seat_1['asset_name'],
                                                          'date': mongo_upd_seat_1['date']}
 
                                     mongo_updates.append(mongo_test_dict_1)
@@ -472,11 +472,11 @@ def match_dbs(snipe_list, *asset_not_found):
                                     continue
 
                             else:
-                                logger.debug('error, license {} removal not successful for asset {}'.format())
+                                logger.debug('error, license {} removal not successful for asset {}'.format(i['license_id'], asset_id))
                                 continue
 
                         else:
-                            logger.debug('error, there was something wrong removing ' \
+                            logger.debug('error, there was something wrong removing '
                                          'license {} from asset {}'.format(i['license_name'],
                                                                            i['asset_name']))
                             continue
@@ -551,7 +551,6 @@ def match_dbs(snipe_list, *asset_not_found):
 
                                     if status == 'success':
                                         logger.debug('updating mongo check out 2')
-
 
                                         # api call dict for testing
                                         api_call_2 = {'license_id': license['License ID'],
@@ -694,11 +693,11 @@ def match_dbs(snipe_list, *asset_not_found):
                                             logger.debug('Removed license {} from asset id {}'.format(lic['License ID'], seat['assigned_asset']))
 
                                             logger.debug('UPDATED FREE SEATS 3')
-                                            
+
                                             # updated instance of lic with updated free seat numbers if it was updated
                                             mongo_upd_lic_3 = snipe_lic.find_one({'License ID': lic['license_id']})
                                             mongo_upd_seat_3 = snipe_seats.find_one({'license_id': seat['license_id'], 'id': seat['id']})
-                                            logger.debug('Removed license {} from asset id {}'.format(seat['license_id'], itm_str))
+                                            logger.debug('Removed license {} from asset id {}'.format(seat['license_id'], asset_id))
 
                                             try:
                                                 mongo_test_dict_3 = {'license_id': mongo_upd_lic_3['License ID'],
@@ -734,7 +733,7 @@ def match_dbs(snipe_list, *asset_not_found):
                                                 not_added.append(asset_id)
                                                 continue
                                             else:
-                                                logger.debug('unspecified error removing seat for asset {} from license {}'.format(asset_id, lic['License ID'])) 
+                                                logger.debug('unspecified error removing seat for asset {} from license {}'.format(asset_id, lic['License ID']))
 
                                         else:
                                             logger.debug('error, license removal not successful')
@@ -1089,16 +1088,16 @@ def create_lic():
                              .format(license['License ID'],
                                      int(item['count']) + 500,
                                      license['Total Seats']))
-                #continue
+                # continue
             else:
                 logger.debug('check: AMOUNT SEATS IS NOT CORRECT for license ID {} bg count {}, mongo ct {} '
                              .format(license['License ID'],
                                      int(item['count']) + 500,
                                      license['Total Seats']))
-                #continue
+                # continue
 
         print('NEXT')
-        #continue
+        # continue
 
         # purposely avoiding the lines below during testing,
         # not wanting to push to snipe API yet
@@ -1118,10 +1117,10 @@ def create_lic():
                                             url=url,
                                             data=payload,
                                             headers=cfg.api_headers)
-                #logger.debug(pformat(response.text))
+                # logger.debug(pformat(response.text))
 
                 content = response.json()
-                #logger.debug(pformat(content))
+                # logger.debug(pformat(content))
                 status = str(content['status'])
                 ct += 1
                 if status == 'success':
@@ -1161,10 +1160,10 @@ def create_lic():
                                                  url=url,
                                                  data=payload,
                                                  headers=cfg.api_headers)
-                    #logger.debug(pformat(response2.text))
+                    # logger.debug(pformat(response2.text))
 
                     content2 = response2.json()
-                    #logger.debug(pformat(content2))
+                    # logger.debug(pformat(content2))
                     status = str(content2['status'])
                     ct += 1
                     if status == 'success':
