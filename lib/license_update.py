@@ -43,7 +43,7 @@ def main():
 class BigfixSoftware:
     '''Class for updating software licenses information from BigFix in mongoDB'''
 
-    software_response = cfg.response
+    software_response = cfg.software()
     xml_list = []
     software_list = []
     all_software = []

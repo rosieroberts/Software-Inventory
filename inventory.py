@@ -45,6 +45,12 @@ logger.addHandler(stream_handler)
 
 def main(args):
     if args:
+
+        client = pymongo.MongoClient("mongodb://localhost:27017/")
+        software_db = client['software_inventory']
+        # Snipe Seats collection
+        snipe_seats = software_db['snipe_seat']
+
         assets = []
         licenses = []
         for item in args:
@@ -56,17 +62,45 @@ def main(args):
                 licenses.append(item['argument'])
 
         # Update databases first
-        upd_dbs.upd_snipe_hw()
-        upd_dbs.upd_bx_hw()
-        upd_dbs.upd_bx_sw()
+        #upd_dbs.upd_snipe_hw()
+        #upd_dbs.upd_bx_hw()
+        #upd_dbs.upd_bx_sw()
 
         # create licenses
         create_lic()
 
         if len(assets) > 0:
-            upd_dbs.upd_lic()
+            lic_list = []
             asset_list = get_asset_list(assets)
+            for item in asset_list:
+                # getting licenseID associated with each assetID
+                lic = snipe_seats.find({'assigned_asset': item['ID']},
+                                       {'_id': 0, 'license_id': 1})
+                if lic:
+                    lic = list(lic)
+                    print(lic)
+                    logger.debug('asset_tag {}/asset ID {} has {} licenses'.format(item['Asset Tag'],
+                                                                                   item['ID'],
+                                                                                   len(lic)))
+                    for licen in lic:
+                        lic_list.append(licen['license_id'])
+                else:
+                    logger.debug('License seats are not found for {} '.format(item['Asset Tag']))
+                    sys.exit()
+            print(lic_list)
+            print(len(lic_list))
+
+            # remove duplicate licenses
+            if len(lic_list) > 1: 
+                lic_list = set(lic_list)
+                print(len(lic_list))
+            print(lic_list)
+
+            # update seat information in mongo for all licenses associated with
+            # assets in arguments
+            upd_dbs.upd_lic(*lic_list)           
             match_dbs(asset_list)
+
         if len(licenses) > 0:
             upd_dbs.upd_lic(*licenses)
             asset_lists = get_lic_list(licenses)
@@ -87,7 +121,8 @@ def main(args):
 
 
 def get_asset_list(asset_list):
-    # takes in list of asset hostnames, club, asset_tag, and returns list from snipe_hw db
+    # takes in list of asset hostnames, club, asset_tag, and returns list
+    # of dictionaries from snipe_hw db
     # if no arguments, returns full list of all hosts that have software sorted
 
     logger.debug('FUNCTION get_asset_list')
@@ -154,7 +189,6 @@ def get_asset_list(asset_list):
         snipe_list = snipe_hw.find({}).sort('Asset Tag', pymongo.ASCENDING)
         snipe_list = list(snipe_list)
 
-    logger.debug(snipe_list[:10])
     return snipe_list
 
 
@@ -1075,7 +1109,6 @@ def create_lic():
                             'category_id': '11'})
             logger.debug(item_str)
         else:
-            logger.debug('test UPDATING LICENSE ####### {}'.format(item['sw']))
             # license collection from snipe
             license = lic_col.find_one({'License Name': soft_str},
                                        {'_id': 0,
@@ -1084,10 +1117,11 @@ def create_lic():
                                         'Total Seats': 1})
 
             if int(item['count']) + 500 >= int(license['Total Seats']) >= int(item['count']) + 100:
-                logger.debug('check: AMOUNT SEATS IS CORRECT for license ID {} bg count {}, mongo ct {} '
-                             .format(license['License ID'],
-                                     int(item['count']) + 500,
-                                     license['Total Seats']))
+                pass
+                # logger.debug('check: AMOUNT SEATS IS CORRECT for license ID {} bg count {}, mongo ct {} '
+                #              .format(license['License ID'],
+                #                      int(item['count']) + 500,
+                #                      license['Total Seats']))
                 # continue
             else:
                 logger.debug('check: AMOUNT SEATS IS NOT CORRECT for license ID {} bg count {}, mongo ct {} '
@@ -1096,7 +1130,6 @@ def create_lic():
                                      license['Total Seats']))
                 # continue
 
-        print('NEXT')
         # continue
 
         # purposely avoiding the lines below during testing,
@@ -1142,8 +1175,8 @@ def create_lic():
                                             'Total Seats': 1})
 
                 if int(item['count']) + 500 >= int(license['Total Seats']) >= int(item['count']) + 100:
-                    logger.debug('CORRECT SEAT AMOUNT! license ID {} bg count {}, mongo ct {} '
-                                 .format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
+                    # logger.debug('CORRECT SEAT AMOUNT! license ID {} bg count {}, mongo ct {} '
+                    #              .format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
                     continue
 
                 else:

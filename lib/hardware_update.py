@@ -45,7 +45,7 @@ def main():
 class BigfixHardware:
     """Class for updating software current BigFix hardware information in mongoDB"""
 
-    hardware_response = cfg.hardware_response
+    hardware_response = cfg.hardware()
     xml_list = []
     computer_list = []
 

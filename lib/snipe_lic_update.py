@@ -6,7 +6,7 @@ from json import decoder
 from datetime import date, datetime
 from re import compile
 from time import sleep
-import config as cfg
+from config import updateConfig as cfg
 
 # Logger setup
 logger = getLogger('update_snipe_licenses')
@@ -47,11 +47,13 @@ def main():
 class SnipeSoftware:
     '''Class for updating snipe-it software Licenses in mongoDB'''
 
+    total_record_count = int
     license_info = []
     seat_info = []
     mongo_license_ids = []
     snipe_license_ids = []
     asset_tag_rgx = compile(r'([0-9]{3}[A-Z]{1}-[A-Za-z0-9]{4})')
+    url = cfg.api_url_soft_all
 
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
     # use database named "software_inventory"
@@ -76,17 +78,15 @@ class SnipeSoftware:
 
     def get_software_count(self):
         try:
-            url = cfg.api_url_soft_all
             # get count of licenses in snipeIT
             response = requests.request("GET",
-                                        url=url,
+                                        url=self.url,
                                         headers=cfg.api_headers)
             content = response.json()
-            total_record_count = content['total']
+            self.total_record_count = content['total']
             # no licenses in snipeIT
             if self.total_record_count == 0:
                 logger.debug('No License data in Snipe-IT')
-            return total_record_count
 
         except(KeyError, decoder.JSONDecodeError):
             logger.exception('error getting license count from snipe-it')
@@ -95,7 +95,7 @@ class SnipeSoftware:
         # get license information from snipe-it
         try:
             # for every 500 records in total license records
-            for offset in range(0, self.total_record, 500):
+            for offset in range(0, self.total_record_count, 500):
                 querystring = {"offset": offset}
                 response = requests.request("GET",
                                             url=self.url,
@@ -133,9 +133,9 @@ class SnipeSoftware:
         try:
             count = 0
             for license in self.license_info:
-                url = cfg.api_url_soft_all_seats.format(license['id'])
+                url = cfg.api_url_soft_all_seats.format(license['License ID'])
                 # for every 50 seats in total seats per license
-                for offset2 in range(0, license['seats'], 50):
+                for offset2 in range(0, license['Total Seats'], 50):
                     querystring = {'offset': offset2}
                     # get seat information from snipe-it and add to mongodb
                     response = requests.request("GET",
@@ -185,9 +185,11 @@ class SnipeSoftware:
                                 'seat_name': row['name'],
                                 'asset_name': hostname,
                                 'asset_tag': assigned_asset_name,
-                                'license_name': license['name'],
+                                'license_name': license['License Name'],
                                 'date': today_date}
                         self.seat_info.append(seat)
+                        logger.info('Got info for seat {} license {} from SnipeIT'
+                                    .format(seat['id'], seat['license_id']))
         except(KeyError,
                decoder.JSONDecodeError):
             logger.exception('Problem adding License seats information to MongoDB')
