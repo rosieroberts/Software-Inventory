@@ -145,7 +145,7 @@ class SnipeSoftware:
                     content = response.json()
                     # sleep if number of requests is 90 to prevent errors
                     count += 1
-                    if count == 90:
+                    if count == 120:
                         sleep(60)
                         count = 0
                     for row in content['rows']:
