@@ -143,7 +143,7 @@ class SnipeSoftware:
                                                 headers=cfg.api_headers,
                                                 params=querystring)
                     content = response.json()
-                    # sleep if number of requests is 90 to prevent errors
+                    # sleep if number of requests is 120 to prevent errors
                     count += 1
                     if count == 120:
                         sleep(60)
@@ -200,8 +200,6 @@ class SnipeSoftware:
             # mongoDB adds no more than 1000 records at a time
             for seat in range(0, len(self.seat_info), 1000):
                 self.snipe_seat_col.insert_many(self.seat_info[seat:seat + 1000])
-                logger.info('Added seat {} for license {} to MongoDB '
-                            .format(seat['id'], seat['license_id']))
 
             logger.info('Added all license seats to mongoDB')
 
