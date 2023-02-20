@@ -6,7 +6,7 @@ from json import decoder
 from datetime import date, datetime
 from re import compile
 from time import sleep
-from config import updateConfig as cfg
+import config as cfg
 
 # Logger setup
 logger = getLogger('update_snipe_licenses')
@@ -148,7 +148,7 @@ class SnipeSoftware:
                     if count == 120:
                         sleep(60)
                         count = 0
-                    for row in content['rows']:
+                    for count, row in enumerate(content['rows']):
                         if row['assigned_asset'] is None:
                             assigned_asset = None
                             location = None
@@ -188,8 +188,8 @@ class SnipeSoftware:
                                 'license_name': license['License Name'],
                                 'date': today_date}
                         self.seat_info.append(seat)
-                        logger.info('Got info for seat {} license {} from SnipeIT'
-                                    .format(seat['id'], seat['license_id']))
+                    logger.info('{} seats found for license {} in SnipeIT'
+                                .format(count, license['License ID']))
         except(KeyError,
                decoder.JSONDecodeError):
             logger.exception('Problem adding License seats information to MongoDB')
