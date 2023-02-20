@@ -6,7 +6,7 @@ from datetime import date
 import config as cfg
 
 # Logger setup
-logger = getLogger('update_snipe_hardware')
+logger = getLogger('update_snipe_hardw')
 # TODO: set to ERROR later on after setup
 logger.setLevel(DEBUG)
 
