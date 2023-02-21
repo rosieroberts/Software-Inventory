@@ -2,9 +2,13 @@
 
 import pytest
 import Software_Inventory.inventory as inv
-# import lib.upd_dbs as upd
+import lib.hardware_update as hardware
+import lib.license_update as license
+import lib.snipe_hw_update as snipe_hw
+import lib.snipe_lic_update as snipe_lic
+
 # from lib.inv_mail import send_mail
-# import lib.config as cfg
+import lib.config as cfg
 from re import compile
 from datetime import date
 # from time import time, ctime
@@ -97,8 +101,7 @@ def get_assets(get_club, get_assettag, get_hostname):
 
 @pytest.fixture
 def get_lic_assets(get_license):
-    # asset_lic_list = inv.get_lic_list([get_license])
-    # no licenses are currently in mongo, return empty list
+    asset_lic_list = inv.get_lic_list([get_license])
     asset_lic_list = []
     print('LICENSE ASSET LIST')
     print(asset_lic_list)
@@ -115,14 +118,46 @@ def match(get_assets, get_lic_assets):
     return results
 
 
-class TestUpdDbs:
-    """Test class for upd_dbs"""
+class testHardwareUpdate:
+    """Test class for hardware_update"""
+
+    def test_1(self):
+
+        pass
+
+    def test_2(self):
+        pass
+
+
+class testLicenseUpdate:
+    """Test class for license_update"""
 
     def test_1(self):
         pass
 
     def test_2(self):
         pass
+
+
+class testSnipehwUpdate:
+    """Test class for snipe_hw_update"""
+
+    def test_1(self):
+        pass
+
+    def test_2(self):
+        pass
+
+
+class testSnipeLicUpdate:
+    """Test class for snipe_lic_update"""
+
+    def test_1(self):
+        pass
+
+    def test_2(self):
+        pass
+
 
 
 class TestInventory:

@@ -118,7 +118,7 @@ class BigfixSoftware:
             # get amount of seats(instances) for each license(software)
             lic_w_count = {i: self.all_software.count(i) for i in self.all_software}
 
-            for count, lic in lic_w_count.items():
+            for lic, count in lic_w_count.items():
                 lic_dict = {'sw': lic,
                             'count': count}
                 self.licenses_w_count.append(lic_dict)
