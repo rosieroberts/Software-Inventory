@@ -6,7 +6,7 @@ import xmltodict
 from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from json import decoder
 from datetime import date
-import lib.config as cfg
+import config as cfg
 
 
 # Logger setup
@@ -53,7 +53,7 @@ class BigfixSoftware:
         with open('software.txt', 'w') as file:
             file.write(self.software_response)
 
-        file_ = open('/opt/Software_Inventory/XML_files/software.txt', 'rb')
+        file_ = open('/opt/Software_Inventory/update_dbs/XML_files/software.txt', 'rb')
         software_xml = dumps(xmltodict.parse(file_))
         software_xml = loads(software_xml)
         # get software name, computer name from xml file

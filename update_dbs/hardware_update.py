@@ -7,7 +7,7 @@ from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from json import decoder
 from datetime import date
 from netaddr import EUI, mac_unix_expanded
-import lib.config as cfg
+import config as cfg
 
 
 # Logger setup
@@ -50,10 +50,10 @@ class BigfixHardware:
     computer_list = []
 
     def get_hardware(self):
-        with open('/opt/Software_Inventory/XML_files/hardware.txt', 'w') as file:
+        with open('/opt/Software_Inventory/update_dbs/XML_files/hardware.txt', 'w') as file:
             file.write(self.hardware_response)
 
-        file_ = open('/opt/Software_Inventory/XML_files/hardware.txt', 'rb')
+        file_ = open('/opt/Software_Inventory/update_dbs/XML_files/hardware.txt', 'rb')
         hardware_xml = dumps(xmltodict.parse(file_))
         hardware_xml = loads(hardware_xml)
         # get computer name, IP, Mac address

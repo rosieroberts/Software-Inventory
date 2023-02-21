@@ -3,7 +3,7 @@ import requests
 from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from json import decoder
 from datetime import date
-import lib.config as cfg
+import config as cfg
 
 # Logger setup
 logger = getLogger('update_snipe_hardw')

@@ -6,7 +6,7 @@ from json import decoder
 from datetime import date, datetime
 from re import compile
 from time import sleep
-import lib.config as cfg
+import config as cfg
 
 # Logger setup
 logger = getLogger('update_snipe_licenses')
@@ -184,8 +184,8 @@ class SnipeSoftware:
                                 'date': today_date}
                         self.seat_info.append(seat)
                         seat_count += 1
-                logger.info('{} seats found for license {} in SnipeIT'
-                            .format(seat_count, license['License ID']))
+                # logger.info('{} seats found for license {} in SnipeIT'
+                #            .format(seat_count, license['License ID']))
 
         except(KeyError,
                decoder.JSONDecodeError):
