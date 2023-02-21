@@ -11,7 +11,7 @@ from time import time, sleep
 from datetime import date, timedelta
 from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from argparse import ArgumentParser
-from lib import config as cfg
+from update_dbs import config as cfg
 from lib import upd_dbs
 
 # get today's date
