@@ -82,31 +82,20 @@ def main(args):
                 else:
                     logger.debug('License seats are not found for {} '.format(item['Asset Tag']))
                     sys.exit()
-            print(lic_list)
-            print(len(lic_list))
 
             # remove duplicate licenses
             if len(lic_list) > 1:
                 lic_list = set(lic_list)
-                print(len(lic_list))
-            print(lic_list)
 
             # update seat information in mongo and snipe for all licenses associated with
             # assets in arguments
             match_dbs(asset_list)
 
         if len(licenses) > 0:
-            asset_lists = get_lic_list(licenses)
-            asset_list = asset_lists[0]
-            assets_not_found = asset_lists[1]
-            match_dbs(asset_list, *assets_not_found)
+            asset_list = get_lic_list(licenses)
+            match_dbs(asset_list)
 
     else:
-        # Update databases first
-        upd_dbs.upd_snipe_hw()
-        # upd_dbs.upd_bx_hw()
-        # upd_dbs.upd_bx_sw()
-
         # create licenses
         create_lic()
         match_dbs(get_asset_list(inv_args()))
@@ -122,21 +111,8 @@ def get_asset_list(asset_list):
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
     asset_db = client['inventory']
-
-    # BigFix HW collection
-    # bigfix_hw = software_db['bigfix_hw']
-
-    # BigFix SW collection
-    # bigfix_sw = software_db['bigfix_sw']
-
     # Snipe HW collection
     snipe_hw = software_db['snipe_hw']
-
-    # Snipe Licenses collection
-    # snipe_lic = software_db['snipe_lic']
-
-    # Snipe Seats  collection
-    # snipe_seats = software_db['snipe_seat']
 
     # deleted assets collection
     deleted = asset_db['deleted']
@@ -266,7 +242,7 @@ def get_lic_list(lic_list):
     return snipe_list, asset_not_found
 
 
-def match_dbs(snipe_list, *asset_not_found):
+def match_dbs(snipe_list):
     ''' Combine all information from all databases
         Snipe HW
         Snipe License
@@ -363,11 +339,6 @@ def match_dbs(snipe_list, *asset_not_found):
         mongo_updates = []
 
         asset_list = snipe_list
-        # assets associated with a license, but have been deleted from snipeIT
-        # seats associated with these assets need to be checked in
-        if asset_not_found:
-            deleted_asset_list = asset_not_found
-            logger.debug('list of deleted assets\n', deleted_asset_list)
 
         # for each asset in snipe_hw look up in mongodb big_fix_hw
         for count, item in enumerate(asset_list):
