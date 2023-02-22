@@ -7,9 +7,6 @@ import sys
 today = date.today()
 today_date = today.strftime('%m-%d-%Y')
 
-# pass test_list in inv_args if wanting to use for testing
-test_list = ['CMPC893', 'EEPC893-1', 'EEPC893-2', 'FMPC893', 'club963', '960C-9125', '954C-37F1']
-
 logger = getLogger('Args')
 # TODO: set to ERROR later on after setup
 logger.setLevel(DEBUG)
