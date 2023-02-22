@@ -33,8 +33,8 @@ logger.addHandler(stream_handler)
 
 
 class getArguments:
-
-    list_iter = []
+    def __init__(self):
+        self.arguments = []
 
     def inv_args(self):
 
@@ -68,7 +68,7 @@ class getArguments:
                         if len(item) == len(club_):
                             arg = {'argument': club_,
                                    'func_type': 'asset'}
-                            self.list_iter.append(arg)
+                            self.arguments.append(arg)
                         else:
                             logger.warning('{} is not in the right format, try again'.format(item))
                             continue
@@ -85,7 +85,7 @@ class getArguments:
                         if len(item) == len(asset_tag):
                             arg = {'argument': asset_tag,
                                    'func_type': 'asset'}
-                            self.list_iter.append(arg)
+                            self.arguments.append(arg)
                         else:
                             logger.warning('{} is not in the right format, try again'.format(item))
                             continue
@@ -105,7 +105,7 @@ class getArguments:
                         if len(item) == len(hostname):
                             arg = {'argument': hostname,
                                    'func_type': 'asset'}
-                            self.list_iter.append(arg)
+                            self.arguments.append(arg)
                         else:
                             logger.warning('{} is not in the right format, try again'.format(item))
                             continue
@@ -126,7 +126,7 @@ class getArguments:
                             if len(item) == len(license):
                                 arg = {'argument': license,
                                        'func_type': 'license'}
-                                self.list_iter.append(arg)
+                                self.arguments.append(arg)
                             else:
                                 logger.warning('{} is not in the right format, try again'.format(item))
                                 continue
@@ -143,7 +143,7 @@ class getArguments:
             if not inv_args.club and not inv_args.assetTag and not inv_args.hostname and not inv_args.license:
                 return None
             else:
-                if len(self.list_iter) == 0:
+                if len(self.arguments) == 0:
                     logger.warning('error, the argument is not in the right format, exiting')
                     sys.exit()
 
