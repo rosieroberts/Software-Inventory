@@ -2,6 +2,7 @@ from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from datetime import date
 import pymongo
 import sys
+from re import compile
 
 # get today's date
 today = date.today()
@@ -50,21 +51,24 @@ class getAssets:
         self.asset_list_sw = []
         self.license_list = []
 
+    def get_all_assets(self):
+        # get list of snipe hw devices to look up software for
+        self.asset_list_hw = self.snipe_hw.find({}).sort('Asset Tag',
+                                                         pymongo.ASCENDING)
+        self.asset_list_hw = list(self.asset_list_hw)
+        print(self.asset_list_hw[:5])
+        return self.asset_list_hw
+
     def get_asset_list(self, asset_list):
         # takes in list of asset hostnames, club, asset_tag, and returns list
         # of dictionaries from snipe_hw db
         # if no arguments, returns full list of all hosts that have software sorted
+        if not asset_list:
+            return None
 
         club_rgx = compile(r'((club)[\d]{3})')
         asset_tag_rgx = compile(r'([0-9]{3}[A-Z]{1}-[A-Za-z0-9]{4})')
         hostname_rgx = compile(r'[A-Z]{1,3}[PC]{1}\d{3}(-[\d]{1,2})*')
-
-        if not asset_list:
-            # get list of snipe hw devices to look up software for
-            self.asset_list_hw = self.snipe_hw.find({}).sort('Asset Tag',
-                                                             pymongo.ASCENDING)
-            self.asset_list_hw = list(self.asset_list_hw)
-            return
 
         deleted_assets_ct = 0
         not_found_assets_ct = 0
@@ -129,15 +133,15 @@ class getAssets:
                             'seat_id': lic['id'],
                             'asset_tag': lic['asset_tag']}
                     self.license_list.append(seat)
-                # remove duplicates if any
-                self.license_list = set(self.license_list)
 
         # only found assets and deleted assets associated with a seat will be
         # returned. This message for review.
-        logger.debug('Assets found {}\nAssets not found {}\nAssets deleted {}'
-                     .format(found_assets_ct,
-                             not_found_assets_ct,
-                             deleted_assets_ct))
+        logger.debug('Asset {}'.format(item['Asset Tag']))
+        logger.debug('Assets found {}'.format(found_assets_ct))
+        if not_found_assets_ct > 0:
+            logger.debug('Assets not found {}'.format(not_found_assets_ct))
+        if deleted_assets_ct > 0:
+            logger.debug('Assets deleted {}'.format(deleted_assets_ct))
 
     def get_lic_list(self, lic_list):
         ''' Only runs when a list of licenses ('123' format) is provided in
@@ -148,7 +152,7 @@ class getAssets:
         license_rgx = compile(r'([\d]{1,3})')
 
         if not lic_list:
-            return
+            return None
 
         deleted_assets_ct = 0
         not_found_assets_ct = 0
@@ -203,7 +207,10 @@ class getAssets:
                         continue
         # only found assets and deleted assets associated with a seat will be
         # returned. This message for review.
-        logger.debug('Assets found {}\nAssets not found {}\nAssets deleted {}'
-                     .format(found_assets_ct,
-                             not_found_assets_ct,
-                             deleted_assets_ct))
+        logger.debug('License {}'.format(item))
+        logger.debug('Assets found {}'.format(found_assets_ct))
+        if not_found_assets_ct > 0:
+            logger.debug('Assets not found {}'.format(not_found_assets_ct))
+        if deleted_assets_ct > 0:
+            logger.debug('Assets deleted {}'.format(deleted_assets_ct))
+        return self.asset_list_sw

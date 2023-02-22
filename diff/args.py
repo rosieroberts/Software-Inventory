@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from datetime import date
+from re import compile
 import sys
 
 # get today's date
@@ -30,6 +31,7 @@ logger.addHandler(stream_handler)
 
 
 class getArguments:
+
     def __init__(self):
         self.arguments = []
 
