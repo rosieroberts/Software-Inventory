@@ -81,17 +81,17 @@ class createLicense:
         for item in self.license_list:
             # adding 100 extra seats to prevent future errors
             lic_name = item['sw']
-            if item['sw'] not in self.snipe_lic_list:
+            if item['sw'] not in self.snipe_licenses:
                 logger.debug('Found new license {} '
                              .format(lic_name))
                 self.new_licenses.append(item)
             else:
                 # if license is found, check seat amount
-                license = self.licenses_col.find_one({'License Name': lic_name},
-                                                     {'_id': 0,
-                                                      'License Name': 1,
-                                                      'License ID': 1,
-                                                      'Total Seats': 1})
+                license = self.snipe_lic_col.find_one({'License Name': lic_name},
+                                                      {'_id': 0,
+                                                       'License Name': 1,
+                                                       'License ID': 1,
+                                                       'Total Seats': 1})
                 # check if license has more than 50 empty seats
                 # or no more than 100
                 if (int(item['count']) + 100 >= int(license['Total Seats']) and
