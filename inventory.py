@@ -12,7 +12,6 @@ from datetime import date, timedelta
 from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from argparse import ArgumentParser
 from update_dbs import config as cfg
-from lib import upd_dbs
 
 # get today's date
 today = date.today()
@@ -67,25 +66,6 @@ def main(args):
         if len(assets) > 0:
             lic_list = []
             asset_list = get_asset_list(assets)
-            for item in asset_list:
-                # getting licenseID associated with each assetID
-                lic = snipe_seats.find({'assigned_asset': item['ID']},
-                                       {'_id': 0, 'license_id': 1})
-                if lic:
-                    lic = list(lic)
-                    print(lic)
-                    logger.debug('asset_tag {}/asset ID {} has {} licenses'.format(item['Asset Tag'],
-                                                                                   item['ID'],
-                                                                                   len(lic)))
-                    for licen in lic:
-                        lic_list.append(licen['license_id'])
-                else:
-                    logger.debug('License seats are not found for {} '.format(item['Asset Tag']))
-                    sys.exit()
-
-            # remove duplicate licenses
-            if len(lic_list) > 1:
-                lic_list = set(lic_list)
 
             # update seat information in mongo and snipe for all licenses associated with
             # assets in arguments
@@ -1008,8 +988,6 @@ def create_lic():
                                             'Total Seats': 1})
 
                 if int(item['count']) + 500 >= int(license['Total Seats']) >= int(item['count']) + 100:
-                    # logger.debug('CORRECT SEAT AMOUNT! license ID {} bg count {}, mongo ct {} '
-                    #              .format(license['License ID'], int(item['count']) + 500, license['Total Seats']))
                     continue
 
                 else:

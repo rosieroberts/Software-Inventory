@@ -52,7 +52,9 @@ class getAssets:
         self.license_list = []
 
     def get_all_assets(self):
-        # get list of snipe hw devices to look up software for
+        # get list of snipe hw devices to look up software for.
+        # If no arguments, it returns full list of all hosts that
+        # have software sorted
         self.asset_list_hw = self.snipe_hw.find({}).sort('Asset Tag',
                                                          pymongo.ASCENDING)
         self.asset_list_hw = list(self.asset_list_hw)
@@ -60,9 +62,9 @@ class getAssets:
         return self.asset_list_hw
 
     def get_asset_list(self, asset_list):
-        # takes in list of asset hostnames, club, asset_tag, and returns list
-        # of dictionaries from snipe_hw db
-        # if no arguments, returns full list of all hosts that have software sorted
+        '''takes in list of arguments such as asset hostnames, club, asset_tag,
+        and returns list of dictionaries from snipe_hw db. '''
+
         if not asset_list:
             return None
 
@@ -118,7 +120,7 @@ class getAssets:
                 # getting licenseID associated with each assetID
                 license = self.snipe_seats.find({'assigned_asset': item['ID']})
                 if not license:
-                    logger.debug('License seats are not found for {} '
+                    logger.debug('License seats are not found for {}'
                                  .format(item['Asset Tag']))
                     sys.exit()
 
@@ -187,7 +189,8 @@ class getAssets:
                     # there is a case where the asset was deleted but the seat
                     # is still checked out, this will return the asset info
                     if seat['asset_name']:
-                        del_asset = self.deleted.find_one({'_snipeit_hostname_8': seat['asset_name']})
+                        del_asset = self.deleted.find_one(
+                            {'_snipeit_hostname_8': seat['asset_name']})
                         if del_asset:
                             deleted_assets_ct += 1
                             asset = {'ID': del_asset['id'],
@@ -206,7 +209,7 @@ class getAssets:
                     else:
                         continue
         # only found assets and deleted assets associated with a seat will be
-        # returned. This message for review.
+        # returned. This message is for review.
         logger.debug('License {}'.format(item))
         logger.debug('Assets found {}'.format(found_assets_ct))
         if not_found_assets_ct > 0:

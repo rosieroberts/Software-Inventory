@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from diff import args
 import pymongo
 from diff.args import getArguments
 from diff.get_assets import getAssets
@@ -28,7 +27,7 @@ def run(args):
     asset_obj = getAssets()
 
     asset_list = []
-    #if no arguments provided get a list of all asset info
+    # if no arguments provided get a list of all asset info
     if len(arg_assets) == 0 and len(arg_licenses) == 0:
         asset_list = asset_obj.get_all_assets()
 
@@ -44,8 +43,6 @@ def run(args):
         hw_asset_list = asset_obj.asset_list_hw
         hw_license_list = asset_obj.license_list
 
-
-     
 
 if __name__ == '__main__':
     args_obj = getArguments()
