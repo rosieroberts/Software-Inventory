@@ -20,7 +20,7 @@ today = date.today()
 today_date = today.strftime('%Y-%m-%d')
 
 # logfile
-file_handler = FileHandler('/opt/Software_Inventory/logs/software_inventory-ref{}.log'
+file_handler = FileHandler('/opt/Software_Inventory/logs/update_dbs-{}.log'
                            .format(today.strftime('%m%d%Y')))
 file_handler.setLevel(DEBUG)
 file_handler.setFormatter(file_formatter)
@@ -53,7 +53,7 @@ class BigfixSoftware:
         with open('software.txt', 'w') as file:
             file.write(self.software_response)
 
-        file_ = open('/opt/Software_Inventory/XML_files/software.txt', 'rb')
+        file_ = open('/opt/Software_Inventory/update_dbs/XML_files/software.txt', 'rb')
         software_xml = dumps(xmltodict.parse(file_))
         software_xml = loads(software_xml)
         # get software name, computer name from xml file
@@ -118,7 +118,7 @@ class BigfixSoftware:
             # get amount of seats(instances) for each license(software)
             lic_w_count = {i: self.all_software.count(i) for i in self.all_software}
 
-            for count, lic in lic_w_count.items():
+            for lic, count in lic_w_count.items():
                 lic_dict = {'sw': lic,
                             'count': count}
                 self.licenses_w_count.append(lic_dict)

@@ -16,7 +16,7 @@ today = date.today()
 today_date = today.strftime('%Y-%m-%d')
 
 # logfile
-file_handler = FileHandler('/opt/Software_Inventory/logs/software_inventory-ref{}.log'
+file_handler = FileHandler('/opt/Software_Inventory/logs/update_dbs-{}.log'
                            .format(today.strftime('%m%d%Y')))
 file_handler.setLevel(DEBUG)
 file_handler.setFormatter(file_formatter)

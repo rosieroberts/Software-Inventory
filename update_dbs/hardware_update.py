@@ -21,7 +21,7 @@ today = date.today()
 today_date = today.strftime('%Y-%m-%d')
 
 # logfile
-file_handler = FileHandler('/opt/Software_Inventory/logs/software_inventory-ref{}.log'
+file_handler = FileHandler('/opt/Software_Inventory/logs/update_dbs-{}.log'
                            .format(today.strftime('%m%d%Y')))
 file_handler.setLevel(DEBUG)
 file_handler.setFormatter(file_formatter)
@@ -50,16 +50,15 @@ class BigfixHardware:
     computer_list = []
 
     def get_hardware(self):
-        with open('/opt/Software_Inventory/XML_files/hardware.txt', 'w') as file:
+        with open('/opt/Software_Inventory/update_dbs/XML_files/hardware.txt', 'w') as file:
             file.write(self.hardware_response)
 
-        file_ = open('/opt/Software_Inventory/XML_files/hardware.txt', 'rb')
+        file_ = open('/opt/Software_Inventory/update_dbs/XML_files/hardware.txt', 'rb')
         hardware_xml = dumps(xmltodict.parse(file_))
         hardware_xml = loads(hardware_xml)
         # get computer name, IP, Mac address
         self.xml_list = hardware_xml['BESAPI']['Query']['Result']['Tuple']
         logger.debug('getting updated hardware')
-        print('get_hardware')
 
     def parse_xml(self):
         """ Parses xml file from BigFix and creates a list of dictionaries"""

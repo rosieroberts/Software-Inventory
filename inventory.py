@@ -11,7 +11,7 @@ from time import time, sleep
 from datetime import date, timedelta
 from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from argparse import ArgumentParser
-from lib import config as cfg
+from update_dbs import config as cfg
 from lib import upd_dbs
 
 # get today's date
@@ -61,11 +61,6 @@ def main(args):
             if item['func_type'] == 'license':
                 licenses.append(item['argument'])
 
-        # Update databases first
-        #upd_dbs.upd_snipe_hw()
-        #upd_dbs.upd_bx_hw()
-        #upd_dbs.upd_bx_sw()
-
         # create licenses
         create_lic()
 
@@ -87,36 +82,22 @@ def main(args):
                 else:
                     logger.debug('License seats are not found for {} '.format(item['Asset Tag']))
                     sys.exit()
-            print(lic_list)
-            print(len(lic_list))
 
             # remove duplicate licenses
-            if len(lic_list) > 1: 
+            if len(lic_list) > 1:
                 lic_list = set(lic_list)
-                print(len(lic_list))
-            print(lic_list)
 
-            # update seat information in mongo for all licenses associated with
+            # update seat information in mongo and snipe for all licenses associated with
             # assets in arguments
-            upd_dbs.upd_lic(*lic_list)           
             match_dbs(asset_list)
 
         if len(licenses) > 0:
-            upd_dbs.upd_lic(*licenses)
-            asset_lists = get_lic_list(licenses)
-            asset_list = asset_lists[0]
-            assets_not_found = asset_lists[1]
-            match_dbs(asset_list, *assets_not_found)
+            asset_list = get_lic_list(licenses)
+            match_dbs(asset_list)
 
     else:
-        # Update databases first
-        upd_dbs.upd_snipe_hw()
-        # upd_dbs.upd_bx_hw()
-        # upd_dbs.upd_bx_sw()
-
         # create licenses
         create_lic()
-        upd_dbs.upd_lic()
         match_dbs(get_asset_list(inv_args()))
 
 
@@ -130,21 +111,8 @@ def get_asset_list(asset_list):
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
     asset_db = client['inventory']
-
-    # BigFix HW collection
-    # bigfix_hw = software_db['bigfix_hw']
-
-    # BigFix SW collection
-    # bigfix_sw = software_db['bigfix_sw']
-
     # Snipe HW collection
     snipe_hw = software_db['snipe_hw']
-
-    # Snipe Licenses collection
-    # snipe_lic = software_db['snipe_lic']
-
-    # Snipe Seats  collection
-    # snipe_seats = software_db['snipe_seat']
 
     # deleted assets collection
     deleted = asset_db['deleted']
@@ -274,7 +242,7 @@ def get_lic_list(lic_list):
     return snipe_list, asset_not_found
 
 
-def match_dbs(snipe_list, *asset_not_found):
+def match_dbs(snipe_list):
     ''' Combine all information from all databases
         Snipe HW
         Snipe License
@@ -371,11 +339,6 @@ def match_dbs(snipe_list, *asset_not_found):
         mongo_updates = []
 
         asset_list = snipe_list
-        # assets associated with a license, but have been deleted from snipeIT
-        # seats associated with these assets need to be checked in
-        if asset_not_found:
-            deleted_asset_list = asset_not_found
-            logger.debug('list of deleted assets\n', deleted_asset_list)
 
         # for each asset in snipe_hw look up in mongodb big_fix_hw
         for count, item in enumerate(asset_list):
@@ -876,136 +839,6 @@ def match_dbs(snipe_list, *asset_not_found):
            decoder.JSONDecodeError):
         logger.error('There was an error updating the licenses to Snipe-it, check licenses for asset', exc_info=True)
         traceback.print_exc()
-
-
-def comp_nums():
-    # get final amounts of licenses/seats for verification
-
-    logger.debug('FUNCTION comp_nums')
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-
-    software_db = client['software_inventory']
-    inventory_db = client['inventory']
-    snipe_hw_col = software_db['snipe_hw']
-    snipe_del = inventory_db['deleted']
-    bigfix_hw_col = software_db['bigfix_hw']
-    bigfix_sw_col = software_db['bigfix_sw']
-
-    comp_list = upd_dbs.upd_bx_hw()
-    snipe_list = upd_dbs.upd_snipe_hw()
-
-    not_found = []
-    not_found2 = []
-    found = []
-    found2 = []
-    found_deleted = []
-    found_deleted_mac = []
-    found_del_snipe_mac = []
-    found_mac = []
-    found_mac2 = []
-    snipe_fmac = []
-    bigfix_fmac = []
-    found_host = []
-    found_host_sw = []
-    # amount of assets in bigfix found in snipe
-    for item in comp_list:
-        snipe_hw_ip = snipe_hw_col.find({'IP': item['IP'], 'Mac Address': item['mac_addr']},
-                                        {'IP': 1, 'Mac Address': 1, '_id': 0})
-        snipe_hw_ip = list(snipe_hw_ip)
-
-        if snipe_hw_ip:
-            found.append(item)
-
-        else:
-            deleted = snipe_del.find({'_snipeit_ip_6': item['IP'], '_snipeit_mac_address_7': item['mac_addr']},
-                                     {'_snipeit_ip_6': 1, '_snipeit_mac_address_7': 1, '_id': 0})
-            deleted = list(deleted)
-            if deleted:
-                found_deleted.append(item)
-            else:
-                snipe_mac = snipe_hw_col.find({'Mac Address': item['mac_addr']},
-                                              {'IP': 1, 'Mac Address': 1, 'Hostname': 1, '_id': 0})
-                snipe_mac = list(snipe_mac)
-
-                if snipe_mac:
-                    found_mac.append(item)
-                    snipe_fmac.append(snipe_mac[0])
-
-                else:
-                    deleted_mac = snipe_del.find({'_snipeit_mac_address_7': item['mac_addr']},
-                                                 {'_snipeit_ip_6': 1, '_snipeit_mac_address_7': 1, '_id': 0})
-                    deleted_mac = list(deleted_mac)
-                    if deleted_mac:
-                        found_deleted_mac.append(item)
-                        found_del_snipe_mac.append(deleted_mac[0])
-                    else:
-                        not_found.append(item)
-
-    # amount of assets from snipe found in bigfix hw
-    for item2 in snipe_list:
-        bigfix_hw_ip = bigfix_hw_col.find({'IP': item2['IP'], 'mac_addr': item2['Mac Address']},
-                                          {'IP': 1, 'mac_addr': 1, '_id': 0})
-        bigfix_hw_ip = list(bigfix_hw_ip)
-
-        if bigfix_hw_ip:
-            found2.append(item2)
-
-        else:
-            bigfix_hw_mac = bigfix_hw_col.find({'mac_addr': item2['Mac Address']},
-                                               {'IP': 1, 'mac_addr': 1, 'comp_name': 1, '_id': 0})
-            bigfix_hw_mac = list(bigfix_hw_mac)
-
-            if bigfix_hw_mac:
-                found_mac2.append(item2)
-                bigfix_fmac.append(bigfix_hw_mac[0])
-
-            else:
-                bigfix_hw_host = bigfix_hw_col.find({'comp_name': item2['Hostname']},
-                                                    {'IP': 1, 'mac_addr': 1, 'comp_name': 1, '_id': 0})
-                bigfix_hw_host = list(bigfix_hw_host)
-
-                if bigfix_hw_host:
-                    found_host.append(item2)
-
-                else:
-                    bigfix_sw_host = bigfix_sw_col.find({'comp_name': item2['Hostname']},
-                                                        {'comp_name': 1, '_id': 0})
-                    bigfix_sw_host = list(bigfix_sw_host)
-
-                    if bigfix_sw_host:
-                        found_host_sw.append(item2)
-                        print(bigfix_sw_host[0])
-                    else:
-                        not_found2.append(item2)
-
-    print('______________________________________________________')
-    print('HOST FOUND')
-    pprint(found_host_sw)
-    print('______________________________________________________')
-    print('NOT FOUND')
-    pprint(not_found2)
-    print(len(snipe_list), 'all snipe devices')
-    print(len(found2), 'found in bigfix hw devices')
-    print(len(found_mac2), 'found with diff ip in bigfix')
-    print(len(found_host), 'found only computer name in bigfix hw')
-    print(len(found_host_sw), 'found only computer name in bigfix sw')
-    # print(len(found_deleted), 'found in deleted')
-    # print(len(found_deleted_mac), 'found in deleted_mac')
-    print(len(not_found2), 'not found')
-
-
-def api_call():
-    # for testing
-    # license ID and seat id
-    url = cfg.api_url_software_seat.format('3', '1999')
-    # asset ID
-    item_str = str({'asset_id': '5702'})
-    payload = item_str.replace('\'', '\"')
-    response = requests.request("PATCH",
-                                url=url,
-                                data=payload,
-                                headers=cfg.api_headers)
-    logger.debug(pformat(response.text))
 
 
 def check_in(snipe_list):

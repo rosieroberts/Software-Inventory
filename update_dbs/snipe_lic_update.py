@@ -6,7 +6,7 @@ from json import decoder
 from datetime import date, datetime
 from re import compile
 from time import sleep
-from config import updateConfig as cfg
+import config as cfg
 
 # Logger setup
 logger = getLogger('update_snipe_licenses')
@@ -19,7 +19,7 @@ today = date.today()
 today_date = today.strftime('%Y-%m-%d')
 
 # logfile
-file_handler = FileHandler('/opt/Software_Inventory/logs/software_inventory-ref{}.log'
+file_handler = FileHandler('/opt/Software_Inventory/logs/update_dbs-{}.log'
                            .format(today.strftime('%m%d%Y')))
 file_handler.setLevel(DEBUG)
 file_handler.setFormatter(file_formatter)
@@ -60,21 +60,15 @@ class SnipeSoftware:
     soft_db = myclient['software_inventory']
     # use collection named "snipe_lic"
     snipe_lic = soft_db['snipe_lic']
-
-    # use database named "inventory"
-    hard_db = myclient['inventory']
-
-    # use collection for hardware
-    hardware_col = hard_db['snipe']
-
-    # use collection for deleted hardware
-    deleted_hw_col = hard_db['deleted']
-
     # use collection for seats
     snipe_seat_col = soft_db['snipe_seat']
 
-    # use collection for amount of assets with software
-    software = soft_db['software']
+    # use database named "inventory"
+    hard_db = myclient['inventory']
+    # use collection for hardware
+    hardware_col = hard_db['snipe']
+    # use collection for deleted hardware
+    deleted_hw_col = hard_db['deleted']
 
     def get_software_count(self):
         try:
@@ -133,6 +127,7 @@ class SnipeSoftware:
         try:
             count = 0
             for license in self.license_info:
+                seat_count = 0
                 url = cfg.api_url_soft_all_seats.format(license['License ID'])
                 # for every 50 seats in total seats per license
                 for offset2 in range(0, license['Total Seats'], 50):
@@ -143,10 +138,10 @@ class SnipeSoftware:
                                                 headers=cfg.api_headers,
                                                 params=querystring)
                     content = response.json()
-                    # sleep if number of requests is 90 to prevent errors
+                    # sleep if number of requests is 120 to prevent errors
                     count += 1
-                    if count == 120:
-                        sleep(60)
+                    if count == 118:
+                        sleep(61)
                         count = 0
                     for row in content['rows']:
                         if row['assigned_asset'] is None:
@@ -188,11 +183,15 @@ class SnipeSoftware:
                                 'license_name': license['License Name'],
                                 'date': today_date}
                         self.seat_info.append(seat)
-                        logger.info('Got info for seat {} license {} from SnipeIT'
-                                    .format(seat['id'], seat['license_id']))
+                        seat_count += 1
+                # logger.info('{} seats found for license {} in SnipeIT'
+                #            .format(seat_count, license['License ID']))
+
         except(KeyError,
                decoder.JSONDecodeError):
-            logger.exception('Problem adding License seats information to MongoDB')
+            # if error is KeyError: 'rows' - the problem is too many requests
+            # 118 requests at a time with 61 seconds of sleep seems to do the trick
+            logger.exception('error, problem adding License seats information to MongoDB')
 
     def update_seats(self):
         try:
@@ -200,8 +199,6 @@ class SnipeSoftware:
             # mongoDB adds no more than 1000 records at a time
             for seat in range(0, len(self.seat_info), 1000):
                 self.snipe_seat_col.insert_many(self.seat_info[seat:seat + 1000])
-                logger.info('Added seat {} for license {} to MongoDB '
-                            .format(seat['id'], seat['license_id']))
 
             logger.info('Added all license seats to mongoDB')
 
