@@ -47,13 +47,21 @@ class createLicense:
         self.new_licenses = []
         self.upd_licenses = []
 
-    def get_license_lists(self):
+    def get_license_lists(self, args=None):
         ''' Gets license lists from licenses_w_count (BigFix)
             and from snipe_lic (snipe_it)
             and adds them to two lists'''
         # bigfix
-        lic_list = self.licenses_col.find()
-        lic_list = list(lic_list)
+        if args is not None:
+            # only get list of licenses in arguments to update
+            lic_list = []
+            for lic in args:
+                lic_name = self.licenses_col.find_one({'sw': lic})
+                lic_list.append(lic_name)
+        else:
+            # else update all licenses
+            lic_list = self.licenses_col.find()
+            lic_list = list(lic_list)
         # snipe
         snipe_lic = self.snipe_lic_col.find()
         snipe_lic = list(snipe_lic)
@@ -64,19 +72,7 @@ class createLicense:
 
         # create list of all license names in bigfix
         for item in lic_list:
-            try:
-                # sometimes characters not supported appear in software
-                # names from bigfix
-                soft_str = item['sw']
-                soft_str = soft_str.replace('Â', '')
-                soft_str = soft_str.replace('™', '')
-                soft_str = soft_str.replace('®', '')
-                item['sw'] = soft_str
-                self.license_list.append(item)
-                print(item)
-            except UnicodeEncodeError:
-                logger.exception('Decode error with software item {}'
-                                 .format(soft_str))
+            self.license_list.append(item)
 
     def find_license_changes(self):
         '''gets total list of unique licenses and adds them to snipe it
@@ -86,6 +82,8 @@ class createLicense:
             # adding 100 extra seats to prevent future errors
             lic_name = item['sw']
             if item['sw'] not in self.snipe_lic_list:
+                logger.debug('Found new license {} '
+                             .format(lic_name))
                 self.new_licenses.append(item)
             else:
                 # if license is found, check seat amount
@@ -100,6 +98,11 @@ class createLicense:
                         int(license['Total Seats']) >= int(item['count']) + 50):
                     continue
                 else:
+                    logger.debug('Found changes for license {}.\n'
+                                 'Updating seat amount from {} to {}'
+                                 .format(lic_name,
+                                         license['Total Seats'],
+                                         item['count']))
                     self.upd_licenses.append(item)
 
     def create_license(self):

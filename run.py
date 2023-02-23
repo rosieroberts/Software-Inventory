@@ -3,6 +3,7 @@
 import pymongo
 from diff.args import getArguments
 from diff.get_assets import getAssets
+from diff.create_license import createLicense
 
 client = pymongo.MongoClient("mongodb://localhost:27017/")
 software_db = client['software_inventory']
@@ -19,29 +20,40 @@ def run(args):
         for item in args:
             if item['func_type'] == 'asset':
                 arg_assets.append(item['argument'])
-
             if item['func_type'] == 'license':
                 arg_licenses.append(item['argument'])
 
+    if len(arg_assets) == 0: arg_assets = None
+    if len(arg_licenses) == 0: arg_licenses = None
+
     # create an instance of getAssets class
     asset_obj = getAssets()
+    create_lic_obj = createLicense()
 
     asset_list = []
     # if no arguments provided get a list of all asset info
-    if len(arg_assets) == 0 and len(arg_licenses) == 0:
+    if not arg_licenses and not arg_assets:
         asset_list = asset_obj.get_all_assets()
 
     # if license arguments provided, get list of assets
     # associated with those licenses
-    if len(arg_licenses) > 0:
+    if arg_licenses:
         asset_obj.get_lic_list(arg_licenses)
         sw_asset_list = asset_obj.asset_list_sw
+        sw_license_list = asset_obj.arg_licenses
 
     # get list of dicts of asset info from asset arguments
-    if len(arg_assets) > 0:
+    if arg_assets:
         asset_obj.get_asset_list(arg_assets)
         hw_asset_list = asset_obj.asset_list_hw
         hw_license_list = asset_obj.license_list
+
+    # create new licenses and
+    # update exisiting licenses with correct seat amount
+    create_lic_obj.get_license_lists(arg_licenses)
+    create_lic_obj.find_license_changes()
+    # create_lic_obj.create_license()
+    # create_lic_obj.update_license()
 
 
 if __name__ == '__main__':

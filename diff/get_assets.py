@@ -50,6 +50,7 @@ class getAssets:
         self.asset_list_hw = []
         self.asset_list_sw = []
         self.license_list = []
+        self.arg_licenses = []
 
     def get_all_assets(self):
         # get list of snipe hw devices to look up software for.
@@ -164,10 +165,16 @@ class getAssets:
             lic = license_rgx.search(item)
             if not lic:
                 continue
+            # license found in db, add to list
+            found_lic = self.snipe_seats.find_one({'license_id': int(item)},
+                                                  {'_id': 0, 'license_name': 1})
+            if found_lic:
+                self.arg_licenses.append(found_lic)
             # make sure the input matches the license number regex and looks
             # only for license with active assets seats with no assets
             # associated with them will have a None in asset_name in the
             # snipe_seats collection
+            # this is getting licenses WITH SEATS
             lic_item = self.snipe_seats.find({'license_id': int(item),
                                               'asset_name': {'$ne': None}})
             lic_item = list(lic_item)

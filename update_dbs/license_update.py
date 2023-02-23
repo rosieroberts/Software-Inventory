@@ -70,15 +70,28 @@ class BigfixSoftware:
                 line1 = self.xml_list[count]['Answer'][0]['#text']
                 line2 = self.xml_list[count]['Answer'][1]['#text']
 
+                # sometimes characters not supported appear in software
+                # names from bigfix
+                soft_str = line2
+                soft_str = soft_str.replace('Â', '')
+                soft_str = soft_str.replace('™', '')
+                soft_str = soft_str.replace('®', '')
+                line2 = soft_str
+
                 software_dict = {'comp_name': line1,
                                  'sw': line2,
                                  'date': today_date}
                 self.software_list.append(software_dict)
-
                 self.all_software.append(line2)
 
             # if there was a value missing, add None
-            except(KeyError, decoder.JSONDecodeError):
+            except(KeyError,
+                   decoder.JSONDecodeError,
+                   UnicodeEncodeError):
+
+                if UnicodeEncodeError:
+                    logger.exception('Decode error with software item {}'
+                                     .format(soft_str))
                 software_dict = {'comp_name': line1,
                                  'sw': line2,
                                  'date': today_date}
