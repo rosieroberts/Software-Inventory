@@ -32,7 +32,7 @@ logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
 
-class License:
+class Licenses:
 
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
@@ -80,7 +80,7 @@ class License:
         for item in lic_list:
             self.bigfix_licenses.append(item)
 
-    def get_licenses_new(self):
+    def get_licenses_create(self):
         '''gets total list of unique licenses if not already in snipeIT'''
         # for each of the bigfix licenses
         for item in self.bigfix_licenses:

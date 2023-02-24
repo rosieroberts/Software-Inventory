@@ -30,7 +30,7 @@ logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
 
-class getArguments:
+class Arguments:
 
     def __init__(self):
         self.arguments = []
