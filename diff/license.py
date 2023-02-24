@@ -162,7 +162,7 @@ class License:
             if ct == 118:
                 sleep(60)
                 ct = 0
-            license = self.snipe_lic_col.find_one({'License Name': lic_name},
+            license = self.snipe_lic_col.find_one({'License Name': item['sw']},
                                                   {'_id': 0,
                                                    'License Name': 1,
                                                    'License ID': 1,
