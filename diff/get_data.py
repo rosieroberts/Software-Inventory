@@ -63,7 +63,6 @@ class getData:
         self.asset_list_hw = self.snipe_hw.find({}).sort('Asset Tag',
                                                          pymongo.ASCENDING)
         self.asset_list_hw = list(self.asset_list_hw)
-        return self.asset_list_hw
 
     def get_asset_list(self, asset_list):
         '''takes in list of arguments such as asset hostnames, club, asset_tag,
@@ -226,4 +225,4 @@ class getData:
             logger.debug('Assets not found {}'.format(not_found_assets_ct))
         if deleted_assets_ct > 0:
             logger.debug('Assets deleted {}'.format(deleted_assets_ct))
-        return self.asset_list_sw
+
