@@ -15,7 +15,6 @@ def run(args):
 
     arg_assets = []
     arg_licenses = []
-    print(args)
     if args:
         for item in args:
             if item['func_type'] == 'asset':
@@ -23,8 +22,10 @@ def run(args):
             if item['func_type'] == 'license':
                 arg_licenses.append(item['argument'])
 
-    if len(arg_assets) == 0: arg_assets = None
-    if len(arg_licenses) == 0: arg_licenses = None
+    if len(arg_assets) == 0:
+        arg_assets = None
+    if len(arg_licenses) == 0:
+        arg_licenses = None
 
     # create an instance of getAssets class
     asset_obj = getData()
@@ -52,8 +53,8 @@ def run(args):
     # update exisiting licenses with correct seat amount
     create_lic_obj.get_license_lists(arg_licenses)
     create_lic_obj.find_license_changes()
-    # create_lic_obj.create_license()
-    # create_lic_obj.update_license()
+    create_lic_obj.create_license()
+    create_lic_obj.update_license()
 
 
 if __name__ == '__main__':

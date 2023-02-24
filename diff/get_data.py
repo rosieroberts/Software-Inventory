@@ -59,7 +59,6 @@ class getData:
         self.asset_list_hw = self.snipe_hw.find({}).sort('Asset Tag',
                                                          pymongo.ASCENDING)
         self.asset_list_hw = list(self.asset_list_hw)
-        print(self.asset_list_hw[:5])
         return self.asset_list_hw
 
     def get_asset_list(self, asset_list):
