@@ -30,7 +30,7 @@ logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
 
-class getArguments:
+class Arguments:
 
     def __init__(self):
         self.arguments = []
@@ -57,7 +57,7 @@ class getArguments:
         inv_args = parser.parse_args()
 
         try:
-
+            format_msg = '{} is not in the right format, try again'
             if inv_args.club:
                 club_rgx = compile(r'((club)[\d]{3})')
                 for item in inv_args.club:
@@ -69,10 +69,10 @@ class getArguments:
                                    'func_type': 'asset'}
                             self.arguments.append(arg)
                         else:
-                            logger.warning('{} is not in the right format, try again'.format(item))
+                            logger.warning(format_msg.format(item))
                             continue
                     else:
-                        logger.warning('{} is not in the right format, try again'.format(item))
+                        logger.warning(format_msg.format(item))
                         continue
 
             if inv_args.assetTag:
@@ -86,17 +86,14 @@ class getArguments:
                                    'func_type': 'asset'}
                             self.arguments.append(arg)
                         else:
-                            logger.warning('{} is not in the right format, try again'.format(item))
+                            logger.warning(format_msg.format(item))
                             continue
                     else:
-                        logger.warning('{} is not in the right format, try again'.format(item))
+                        logger.warning(format_msg.format(item))
                         continue
 
             if inv_args.hostname:
                 hostname_rgx = compile(r'[A-Z]{1,3}[PC]{1}\d{3}(-[\d]{1,2})*')
-                if len(inv_args.hostname) > 10:
-                    logger.warning('error, entered more than 10 license arguments, try again')
-                    sys.exit()
                 for item in inv_args.hostname:
                     hostname = hostname_rgx.search(item)
                     if hostname:
@@ -106,19 +103,20 @@ class getArguments:
                                    'func_type': 'asset'}
                             self.arguments.append(arg)
                         else:
-                            logger.warning('{} is not in the right format, try again'.format(item))
+                            logger.warning(format_msg.format(item))
                             continue
                     else:
-                        logger.warning('{} is not in the right format, try again'.format(item))
+                        logger.warning(format_msg.format(item))
                         continue
 
             if inv_args.license:
-                # as of now licenseIDs are not more than 3 digits, after a while licenseIDs will probably increase
-                # to 4 digits, if so, change the regex to r'([\d]{1,4})' and the len to 4 or less
+                # as of now licenseIDs are not more than 3 digits,
+                # after a while licenseIDs will probably increase
+                # to 4 digits, if so, change the regex to r'([\d]{1,4})'
+                # and the len to 4 or less
                 license_rgx = compile(r'([\d]{1,3})')
                 for count, item in enumerate(inv_args.license):
-                    # limit arguments to 10, otherwise upd_dbs.upd_seats() will not work properly
-                    if len(item) <= 3 and count < 10:
+                    if len(item) <= 3:
                         license = license_rgx.search(item)
                         if license:
                             license = str(license.group(0))
@@ -127,25 +125,27 @@ class getArguments:
                                        'func_type': 'license'}
                                 self.arguments.append(arg)
                             else:
-                                logger.warning('{} is not in the right format, try again'.format(item))
+                                logger.warning(format_msg.format(item))
                                 continue
                         else:
-                            logger.warning('{} is not in the right format, try again'.format(item))
+                            logger.warning(format_msg.format(item))
                             continue
                     else:
-                        if count >= 10:
-                            logger.warning('Too many license arguments, try again')
-                        else:
-                            logger.warning('{} license ID has too many digits, try again'.format(item))
+                        logger.warning('{} license ID has too many digits,'
+                                       'try again'.format(item))
                         continue
 
-            if not inv_args.club and not inv_args.assetTag and not inv_args.hostname and not inv_args.license:
+            if not inv_args.club and \
+                    not inv_args.assetTag and \
+                    not inv_args.hostname and not inv_args.license:
                 return None
             else:
                 if len(self.arguments) == 0:
-                    logger.warning('error, the argument is not in the right format, exiting')
+                    logger.warning('error, the argument is not in the right '
+                                   'format, exiting')
                     sys.exit()
 
         except(OSError, AttributeError):
-            logger.critical('There was a problem getting all assets, try again', exc_info=True)
+            logger.critical('There was a problem getting all assets, try again',
+                            exc_info=True)
             return None

@@ -30,7 +30,7 @@ logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
 
-class getAssets:
+class getData:
     """ Class that converts command line arguments,
         hostname, club, asset_tag and licenses and creates a list of
         dictionaries with the asset information stored in mongo that is
@@ -47,22 +47,27 @@ class getAssets:
     deleted = asset_db['deleted']
 
     def __init__(self):
+        # assets info from args and if no args, all assets in snipeIT
         self.asset_list_hw = []
+        # assets info for assets checked out to license provided in args
         self.asset_list_sw = []
+        # seat info for assets in asset_list_hw with a license
         self.license_list = []
+        # license names for any license arguments if provided
+        self.arg_licenses = []
 
     def get_all_assets(self):
-        # get list of snipe hw devices to look up software for
+        # get list of snipe hw devices to look up software for.
+        # If no arguments, it returns full list of all hosts that
+        # have software sorted
         self.asset_list_hw = self.snipe_hw.find({}).sort('Asset Tag',
                                                          pymongo.ASCENDING)
         self.asset_list_hw = list(self.asset_list_hw)
-        print(self.asset_list_hw[:5])
-        return self.asset_list_hw
 
     def get_asset_list(self, asset_list):
-        # takes in list of asset hostnames, club, asset_tag, and returns list
-        # of dictionaries from snipe_hw db
-        # if no arguments, returns full list of all hosts that have software sorted
+        '''takes in list of arguments such as asset hostnames, club, asset_tag,
+        and returns list of dictionaries from snipe_hw db. '''
+
         if not asset_list:
             return None
 
@@ -118,7 +123,7 @@ class getAssets:
                 # getting licenseID associated with each assetID
                 license = self.snipe_seats.find({'assigned_asset': item['ID']})
                 if not license:
-                    logger.debug('License seats are not found for {} '
+                    logger.debug('License seats are not found for {}'
                                  .format(item['Asset Tag']))
                     sys.exit()
 
@@ -162,10 +167,16 @@ class getAssets:
             lic = license_rgx.search(item)
             if not lic:
                 continue
+            # license found in db, add to list
+            found_lic = self.snipe_seats.find_one({'license_id': int(item)},
+                                                  {'_id': 0, 'license_name': 1})
+            if found_lic:
+                self.arg_licenses.append(found_lic['license_name'])
             # make sure the input matches the license number regex and looks
             # only for license with active assets seats with no assets
             # associated with them will have a None in asset_name in the
             # snipe_seats collection
+            # this is getting licenses WITH SEATS
             lic_item = self.snipe_seats.find({'license_id': int(item),
                                               'asset_name': {'$ne': None}})
             lic_item = list(lic_item)
@@ -187,7 +198,8 @@ class getAssets:
                     # there is a case where the asset was deleted but the seat
                     # is still checked out, this will return the asset info
                     if seat['asset_name']:
-                        del_asset = self.deleted.find_one({'_snipeit_hostname_8': seat['asset_name']})
+                        del_asset = self.deleted.find_one(
+                            {'_snipeit_hostname_8': seat['asset_name']})
                         if del_asset:
                             deleted_assets_ct += 1
                             asset = {'ID': del_asset['id'],
@@ -206,11 +218,11 @@ class getAssets:
                     else:
                         continue
         # only found assets and deleted assets associated with a seat will be
-        # returned. This message for review.
+        # returned. This message is for review.
         logger.debug('License {}'.format(item))
         logger.debug('Assets found {}'.format(found_assets_ct))
         if not_found_assets_ct > 0:
             logger.debug('Assets not found {}'.format(not_found_assets_ct))
         if deleted_assets_ct > 0:
             logger.debug('Assets deleted {}'.format(deleted_assets_ct))
-        return self.asset_list_sw
+
