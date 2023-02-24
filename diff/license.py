@@ -197,7 +197,7 @@ class License:
                              'with the right seat amount in SnipeIT'
                              .format(item['sw']))
 
-    def delete_license(self):
+    #def delete_license(self):
 
 
 
