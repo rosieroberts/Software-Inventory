@@ -180,9 +180,9 @@ class License:
                                         data=payload,
                                         headers=cfg.api_headers)
             ct += 1
-            logger.debug(pformat(response.text))
+            # logger.debug(pformat(response.text))
             content = response.json()
-            logger.debug(pformat(content))
+            # logger.debug(pformat(content))
             status = str(content['status'])
             if status == 'success':
                 lic_info = self.snipe_lic_col.update_one(
