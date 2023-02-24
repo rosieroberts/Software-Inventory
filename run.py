@@ -2,8 +2,8 @@
 
 import pymongo
 from diff.args import getArguments
-from diff.get_assets import getAssets
-from diff.create_license import createLicense
+from diff.get_data import getData
+from diff.license import License
 
 client = pymongo.MongoClient("mongodb://localhost:27017/")
 software_db = client['software_inventory']
@@ -27,8 +27,8 @@ def run(args):
     if len(arg_licenses) == 0: arg_licenses = None
 
     # create an instance of getAssets class
-    asset_obj = getAssets()
-    create_lic_obj = createLicense()
+    asset_obj = getData()
+    create_lic_obj = License()
 
     asset_list = []
     # if no arguments provided get a list of all asset info

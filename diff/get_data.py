@@ -30,7 +30,7 @@ logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
 
-class getAssets:
+class getData:
     """ Class that converts command line arguments,
         hostname, club, asset_tag and licenses and creates a list of
         dictionaries with the asset information stored in mongo that is

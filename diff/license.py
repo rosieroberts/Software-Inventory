@@ -32,7 +32,7 @@ logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
 
-class createLicense:
+class License:
 
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']

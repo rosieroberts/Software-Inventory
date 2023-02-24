@@ -77,7 +77,6 @@ class BigfixSoftware:
                 soft_str = soft_str.replace('™', '')
                 soft_str = soft_str.replace('®', '')
                 line2 = soft_str
-
                 software_dict = {'comp_name': line1,
                                  'sw': line2,
                                  'date': today_date}
