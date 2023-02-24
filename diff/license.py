@@ -37,30 +37,36 @@ class License:
     client = pymongo.MongoClient("mongodb://localhost:27017/")
     software_db = client['software_inventory']
     # current licenses from bigfix
-    licenses_col = software_db['licenses_w_count']
+    lic_w_ct_col = software_db['licenses_w_count']
+    # curent licenses from bigfix (license name & hostname)
+    licenses_col = software_db['licenses_info']
     # current license collection from snipe-it
     snipe_lic_col = software_db['snipe_lic']
+    # current snipeIT collection of license seats
+    snipe_seat_col = software_db['snipe_seat']
 
     def __init__(self):
-        self.license_list = []
+        self.bigfix_licenses = []
         self.snipe_licenses = []
         self.new_licenses = []
         self.upd_licenses = []
+        self.del_licenses = []
 
     def get_license_lists(self, args=None):
         ''' Gets license lists from licenses_w_count (BigFix)
             and from snipe_lic (snipe_it)
-            and adds them to two lists'''
+            and adds them to two lists
+            if there are license arguments, get only those'''
         # bigfix
         if args is not None:
             # only get list of licenses in arguments to update
             lic_list = []
             for lic in args:
-                lic_name = self.licenses_col.find_one({'sw': lic})
+                lic_name = self.lic_w_ct_col.find_one({'sw': lic})
                 lic_list.append(lic_name)
         else:
             # else update all licenses
-            lic_list = self.licenses_col.find()
+            lic_list = self.lic_w_ct_col.find()
             lic_list = list(lic_list)
         # snipe
         snipe_lic = self.snipe_lic_col.find()
@@ -72,41 +78,53 @@ class License:
 
         # create list of all license names in bigfix
         for item in lic_list:
-            self.license_list.append(item)
+            self.bigfix_licenses.append(item)
 
-    def find_license_changes(self):
-        '''gets total list of unique licenses and adds them to snipe it
-        if not already added'''
+    def get_licenses_new(self):
+        '''gets total list of unique licenses if not already in snipeIT'''
         # for each of the bigfix licenses
-        for item in self.license_list:
+        for item in self.bigfix_licenses:
             # adding 100 extra seats to prevent future errors
-            lic_name = item['sw']
             # check if the license is in snipeIT
             if item['sw'] not in self.snipe_licenses:
                 # if license is not found, create a new license
                 logger.debug('Found new license {} '
-                             .format(lic_name))
+                             .format(item['sw']))
                 self.new_licenses.append(item)
+
+    def get_licenses_update(self):
+        '''gets licenses that have different seat amounts to update in snipeIT'''
+        for item in self.bigfix_licenses:
+            license = self.snipe_lic_col.find_one({'License Name': item['sw']},
+                                                  {'_id': 0,
+                                                   'License Name': 1,
+                                                   'License ID': 1,
+                                                   'Total Seats': 1})
+            # check if license has more than 50 empty seats
+            # or no more than 100
+            if (int(item['count']) + 100 >= int(license['Total Seats']) and
+                    int(license['Total Seats']) >= int(item['count']) + 50):
+                continue
             else:
-                # if license is found, check seat amount
-                license = self.snipe_lic_col.find_one({'License Name': lic_name},
-                                                      {'_id': 0,
-                                                       'License Name': 1,
-                                                       'License ID': 1,
-                                                       'Total Seats': 1})
-                # check if license has more than 50 empty seats
-                # or no more than 100
-                if (int(item['count']) + 100 >= int(license['Total Seats']) and
-                        int(license['Total Seats']) >= int(item['count']) + 50):
-                    continue
-                else:
-                    # if the seat amount is not right, update
-                    logger.debug('Found changes for license {}.\n'
-                                 'Updating seat amount from {} to {}'
-                                 .format(lic_name,
-                                         license['Total Seats'],
-                                         item['count']))
-                    self.upd_licenses.append(item)
+                # if the seat amount is not right, update
+                logger.debug('Found changes for license {}.\n'
+                             'Updating seat amount from {} to {}'
+                             .format(item['sw'],
+                                     license['Total Seats'],
+                                     item['count']))
+                self.upd_licenses.append(item)
+
+    def get_licenses_delete(self):
+        '''gets licenses that no longer are active in bigfix to remove from
+            snipeIT'''
+        # get list of license names
+        bigfix_licenses = [item['sw'] for item in self.bigfix_licenses]
+        for item in self.snipe_licenses:
+            if item not in bigfix_licenses:
+                # if license is not found, create a new license
+                logger.debug('Found removed license {} '
+                             .format(item))
+                self.del_licenses.append(item)
 
     def create_license(self):
         '''If new licenses found update SnipeIT and databases'''
@@ -197,8 +215,57 @@ class License:
                              'with the right seat amount in SnipeIT'
                              .format(item['sw']))
 
-    #def delete_license(self):
-
+    def delete_license(self):
+        ''' delete removed licenses from snipeIT and databases'''
+        if len(self.del_licenses) == 0:
+            return None
+        ct = 0
+        for item in self.del_licenses:
+            license = self.snipe_lic_col.find_one({'License Name': item},
+                                                  {'_id': 0,
+                                                   'License ID': 1,
+                                                   'License Name': 1,
+                                                   'Free Seats': 1,
+                                                   'Total Seats': 1})
+            # find if license has seats checked out
+            # if none checked out, delete license
+            if license['Total Seats'] == license['Free Seats']:
+                logger.debug('Deleting license {}'
+                             .format(item))
+                url = cfg.api_url_software_lic.format(license['License ID'])
+                if ct == 118:
+                    sleep(60)
+                    ct = 0
+                response = requests.request("DELETE",
+                                            url=url,
+                                            headers=cfg.api_headers)
+                logger.debug(pformat(response.text))
+                status_code = response.status_code
+                ct += 1
+                if status_code == 200:
+                    content = response.json()
+                    status = str(content['status'])
+                    if status == 'success':
+                        logger.debug('Removed license {} from snipe-it'
+                                     .format(license['License ID']))
+                        # remove license from mongodb,
+                        # returns true if deletion success
+                        delete_lic = self.snipe_lic_col.delete_one(
+                            {'License ID': license['License ID']})
+                        delete_lic_seats = self.snipe_seat_col.delete_many(
+                            {'license_id': license['License ID']})
+                        if delete_lic is False:
+                            logger.debug('error, could not delete License {} '
+                                         'from MongoDB'
+                                         .format(license['License ID']))
+                        if delete_lic_seats is False:
+                            logger.debug('error, could not delete License {} '
+                                         'seats from MongoDB'
+                                         .format(license['License ID']))
+                    else:
+                        logger.debug('Could not delete license {} '
+                                     'from SnipeIT'
+                                     .format(license['License ID']))
 
 
 if __name__ == '__main__':

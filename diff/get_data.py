@@ -47,9 +47,13 @@ class getData:
     deleted = asset_db['deleted']
 
     def __init__(self):
+        # assets info from args and if no args, all assets in snipeIT
         self.asset_list_hw = []
+        # assets info for assets checked out to license provided in args
         self.asset_list_sw = []
+        # seat info for assets in asset_list_hw with a license
         self.license_list = []
+        # license names for any license arguments if provided
         self.arg_licenses = []
 
     def get_all_assets(self):

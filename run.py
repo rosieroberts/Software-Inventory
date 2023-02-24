@@ -32,7 +32,6 @@ def run(args):
     asset_obj = getData()
     create_lic_obj = License()
 
-    asset_list = []
     # if no arguments provided get a list of all asset info
     if not arg_licenses and not arg_assets:
         asset_list = asset_obj.get_all_assets()
@@ -53,7 +52,8 @@ def run(args):
     # create new licenses and
     # update exisiting licenses with correct seat amount
     create_lic_obj.get_license_lists(sw_license_list)
-    create_lic_obj.find_license_changes()
+    create_lic_obj.get_licenses_new()
+    create_lic_obj.get_licenses_update()
     create_lic_obj.create_license()
     create_lic_obj.update_license()
 
