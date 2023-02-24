@@ -77,11 +77,13 @@ class License:
     def find_license_changes(self):
         '''gets total list of unique licenses and adds them to snipe it
         if not already added'''
-
+        # for each of the bigfix licenses
         for item in self.license_list:
             # adding 100 extra seats to prevent future errors
             lic_name = item['sw']
+            # check if the license is in snipeIT
             if item['sw'] not in self.snipe_licenses:
+                # if license is not found, create a new license
                 logger.debug('Found new license {} '
                              .format(lic_name))
                 self.new_licenses.append(item)
@@ -98,6 +100,7 @@ class License:
                         int(license['Total Seats']) >= int(item['count']) + 50):
                     continue
                 else:
+                    # if the seat amount is not right, update
                     logger.debug('Found changes for license {}.\n'
                                  'Updating seat amount from {} to {}'
                                  .format(lic_name,
@@ -159,6 +162,11 @@ class License:
             if ct == 118:
                 sleep(60)
                 ct = 0
+            license = self.snipe_lic_col.find_one({'License Name': lic_name},
+                                                  {'_id': 0,
+                                                   'License Name': 1,
+                                                   'License ID': 1,
+                                                   'Total Seats': 1})
             seat_amt = int(item['count']) + 100
             lic_name = item['sw']
             logger.debug('Updating license {} with {} seats'
