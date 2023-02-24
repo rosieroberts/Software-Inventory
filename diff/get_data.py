@@ -168,7 +168,7 @@ class getData:
             found_lic = self.snipe_seats.find_one({'license_id': int(item)},
                                                   {'_id': 0, 'license_name': 1})
             if found_lic:
-                self.arg_licenses.append(found_lic)
+                self.arg_licenses.append(found_lic['license_name'])
             # make sure the input matches the license number regex and looks
             # only for license with active assets seats with no assets
             # associated with them will have a None in asset_name in the

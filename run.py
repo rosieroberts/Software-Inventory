@@ -26,6 +26,7 @@ def run(args):
         arg_assets = None
     if len(arg_licenses) == 0:
         arg_licenses = None
+        sw_license_list = None
 
     # create an instance of getAssets class
     asset_obj = getData()
@@ -51,7 +52,7 @@ def run(args):
 
     # create new licenses and
     # update exisiting licenses with correct seat amount
-    create_lic_obj.get_license_lists(arg_licenses)
+    create_lic_obj.get_license_lists(sw_license_list)
     create_lic_obj.find_license_changes()
     create_lic_obj.create_license()
     create_lic_obj.update_license()
