@@ -44,11 +44,16 @@ class Licenses:
     snipe_lic_col = software_db['snipe_lic']
     # current snipeIT collection of license seats
     snipe_seat_col = software_db['snipe_seat']
+    # curernt snipeIT computer information
+    snipe_hw_col = software_db['snipe_hw']
+    # current bigfix computer information
+    computer_info_col = software_db['computer_info']
 
     def __init__(self):
         self.bigfix_licenses = []
         self.snipe_licenses = []
         self.new_licenses = []
+        self.new_seats = []
         self.upd_licenses = []
         self.del_licenses = []
 
@@ -91,6 +96,41 @@ class Licenses:
                 logger.debug('Found new license {} '
                              .format(item['sw']))
                 self.new_licenses.append(item)
+
+    def get_lic_seats_new(self):
+        '''Gets seat information for new licenses'''
+        # in order to get seat information a license needs to be created first
+        # then get the license id from the POST response in 'create_license()
+        # this information should already be mongo by the time this method
+        # is called, but make sure you are aware of this
+        for lic in self.new_licenses:
+            license_id = self.snipe_lic_col.find_one({'License Name': lic},
+                                                     {'_id': 0,
+                                                      'License ID': 1})
+            assets = self.licenses_col.find({'sw': lic},
+                                            {'_id': 0,
+                                             'comp_name': 1,
+                                             'sw': 1})
+            assets = list(assets)
+            for asset in assets:
+                mac_addr = self.computer_info_col.find_one(
+                    {'comp_name': asset['comp_name']},
+                    {'_id': 0,
+                     'mac_addr': 1})
+                asset_info = self.snipe_hw_col.find_one(
+                    {'Hostname': asset['comp_name'],
+                     'Mac Address': mac_addr['mac_addr']},
+                    {'_id': 0,
+                     'ID': 1,
+                     'Location': 1,
+                     'Asset Tag': 1})
+                seat = {'license_id': license_id['License ID'],
+                        'assigned_asset': asset_info['ID'],
+                        'location': asset_info['Location'],
+                        'asset_name': asset['comp_name'],
+                        'asset_tag': asset_info['Asset Tag'],
+                        'license_name': lic}
+                self.new_seats.append(seat)
 
     def get_licenses_update(self):
         '''gets licenses that have different seat amounts to update in snipeIT'''

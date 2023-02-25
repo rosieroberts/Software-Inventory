@@ -56,6 +56,9 @@ def run(args):
     lic_obj.get_licenses_delete()
     # push changes to SnipeIT API and update MongoDB
     lic_obj.create_license()
+    # get all seat information for new licenses
+    lic_obj.get_lic_seats_new()
+    
     lic_obj.update_license()
     lic_obj.delete_license()
 
