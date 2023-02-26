@@ -53,7 +53,7 @@ class Seats():
             # for each seat checked out to asset
             license_id = seat['license_id']
             seat_id = seat['id']
-            asset_id = seat['asset_id']
+            asset_id = seat['assigned_asset']
             print(license_id, seat_id, asset_id)
             # to prevent API errors
             if ct == 110:
@@ -97,16 +97,19 @@ class Seats():
                 {'$set': {'assigned_asset': None,
                           'asset_name': None,
                           'location': None,
-                          'asset_tag': None}})
+                          'asset_tag': None,
+                          'date': today_date}})
             if seat_upd is False:
                 logger.debug('error, could not update snipe_seat collection '
                              'for license {} and asset {}'
                              .format(license_id, asset_id))
+            free_seats = self.snipe_lic_col.find_one(
+                {'License ID': license_id}, {'_id': 0, 'Free Seats': 1})
             # updating license in Mongo snipe_lic collection
             lic_upd = self.snipe_lic_col.update_one(
                 {'License ID': license_id},
                 {'$set':
-                    {'Free Seats': int(self.snipe_lic_col['Free Seats']) + 1}})
+                    {'Free Seats': int(free_seats) + 1}})
             if lic_upd is False:
                 logger.debug('error, could not update snipe_lic collection '
                              'for license {}'
@@ -172,11 +175,13 @@ class Seats():
                 logger.debug('error, could not update snipe_seat collection '
                              'for license {} and asset {}'
                              .format(license_id, asset_id))
+            free_seats = self.snipe_lic_col.find_one(
+                {'License ID': license_id}, {'_id': 0, 'Free Seats': 1})
             # updating license in Mongo snipe_lic collection
             lic_upd = self.snipe_lic_col.update_one(
                 {'License ID': license_id},
                 {'$set':
-                    {'Free Seats': int(self.snipe_lic_col['Free Seats']) - 1}})
+                    {'Free Seats': int(free_seats) - 1}})
             if lic_upd is False:
                 logger.debug('error, could not update snipe_lic collection '
                              'for license {}'
