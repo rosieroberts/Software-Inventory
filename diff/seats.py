@@ -5,7 +5,7 @@ from pprint import pformat
 import pymongo
 import requests
 from update_dbs import config as cfg
-
+s
 # get today's date
 today = date.today()
 today_date = today.strftime('%m-%d-%Y')
