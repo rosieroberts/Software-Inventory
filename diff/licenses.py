@@ -148,7 +148,8 @@ class Licenses:
                                                   {'_id': 0,
                                                    'License Name': 1,
                                                    'License ID': 1,
-                                                   'Total Seats': 1})
+                                                   'Total Seats': 1,
+                                                   'Free Seats': 1})
             # get licenses that had any changes in seat numbers from last run
             # to find seats to update for those licenses only
             # check if license has only 100 seats free, if not, something
