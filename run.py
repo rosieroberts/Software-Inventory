@@ -58,7 +58,7 @@ def run(args):
     lic_obj.create_license()
     # get all seat information for new licenses
     lic_obj.get_lic_seats_new()
-    
+    print(lic_obj.new_seats)
     lic_obj.update_license()
     lic_obj.delete_license()
 

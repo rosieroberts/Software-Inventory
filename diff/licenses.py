@@ -134,6 +134,7 @@ class Licenses:
 
     def get_licenses_update(self):
         '''gets licenses that have different seat amounts to update in snipeIT'''
+        print(' GET UPDATE')
         for item in self.bigfix_licenses:
             license = self.snipe_lic_col.find_one({'License Name': item['sw']},
                                                   {'_id': 0,
@@ -174,6 +175,7 @@ class Licenses:
 
     def create_license(self):
         '''If new licenses found update SnipeIT and databases'''
+        print('CREATE')
         ct = 0
         for item in self.new_licenses:
             # add sleep to prevent API errors
@@ -220,6 +222,7 @@ class Licenses:
     def update_license(self):
         '''If existing licenses have wrong amount of license seats update
         SnipeIT and databases'''
+        print('UPDATE')
         ct = 0
         for item in self.upd_licenses:
             # add sleep to prevent API errors
@@ -244,7 +247,7 @@ class Licenses:
                                         data=payload,
                                         headers=cfg.api_headers)
             ct += 1
-            # logger.debug(pformat(response.text))
+            logger.debug(pformat(response.text))
             content = response.json()
             # logger.debug(pformat(content))
             status = str(content['status'])
@@ -263,6 +266,7 @@ class Licenses:
 
     def delete_license(self):
         ''' delete removed licenses from snipeIT and databases'''
+        print('DELETE')
         if len(self.del_licenses) == 0:
             return None
         ct = 0
