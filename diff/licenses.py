@@ -192,27 +192,23 @@ class Licenses:
             # for each computer that has this license
             # check if there is a seat already in snipeIT
             # if not, a new seat needs to be added
+            asset_count = 0
             for asset in bigfix_assets:
                 # get mac addr from bigfix
                 mac_addr = self.computer_info_col.find_one(
                     {'comp_name': asset['comp_name']},
                     {'_id': 0,
                      'mac_addr': 1})
-                # get computer info from snipe_hw
-                asset_info = self.snipe_hw_col.find_one(
-                    {'Hostname': asset['comp_name'],
-                     'Mac Address': mac_addr['mac_addr']},
-                    {'_id': 0,
-                     'ID': 1,
-                     'Location': 1,
-                     'Asset Tag': 1})
+                if mac_addr:
+                    # get computer info from snipe_hw
+                    asset_info = self.snipe_hw_col.find_one(
+                        {'Hostname': asset['comp_name'],
+                         'Mac Address': mac_addr['mac_addr']},
+                        {'_id': 0,
+                         'ID': 1,
+                         'Location': 1,
+                         'Asset Tag': 1})
                 if not asset_info:
-                    logger.debug('Asset {} with Mac Address {} '
-                                 'not found to check out license {}.'
-                                 'checking just the hostname'
-                                 .format(asset['comp_name'],
-                                         mac_addr['mac_addr'],
-                                         lic_name))
                     asset_info = self.snipe_hw_col.find_one(
                         {'Hostname': asset['comp_name']},
                         {'_id': 0,
@@ -221,7 +217,7 @@ class Licenses:
                          'Asset Tag': 1})
                     if not asset_info:
                         logger.debug('Asset {} not found to check out '
-                                     'license {}. Check if item is deleted.'
+                                     'license {}. Check asset.'
                                      .format(asset['comp_name'],
                                              lic_name))
                         continue
@@ -239,12 +235,14 @@ class Licenses:
                 # if seat does not exist, add to upd_seat_add list
                 if not snipe_seat:
                     self.seats_add.append(seat)
-                    logger.debug('Check out license {} to asset {}'
-                                 .format(lic_name, seat['asset_name']))
+                    asset_count =+ 1
+            logger.debug('Check out license {} to {} assets'
+                         .format(lic_name, asset_count))
             snipe_seats = self.snipe_seat_col.find({'license_id': license_id})
             snipe_seats = list(snipe_seats)
             #  for each seat already in snipe, check if it still
             # supposed to be checked out, or if it should be removed
+            asset_ct = 0
             for item in snipe_seats:
                 # get computer names from bigfix
                 comp_names = self.licenses_col.find(
@@ -256,8 +254,9 @@ class Licenses:
                 # from bigfix, add to the remove list
                 if item['asset_name'] not in comp_names:
                     self.seats_rem.append(item)
-                    logger.debug('Check in license {} from asset {}'
-                                 .format(lic_name, seat['asset_name']))
+                    asset_ct += 1
+            logger.debug('Check in license {} from {} assets'
+                         .format(lic_name, asset_ct))
 
     def get_licenses_delete(self):
         '''gets licenses that no longer are active in bigfix to remove from
