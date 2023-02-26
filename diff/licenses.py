@@ -173,6 +173,7 @@ class Licenses:
         '''Gets seat information for licenses with changes since last run'''
         # each license that had different seat amounts compared to
         # the last run
+        assets_not_found = []
         if len(self.upd_licenses) == 0:
             logger.debug('no seats to update')
         for lic in self.upd_licenses:
@@ -216,10 +217,7 @@ class Licenses:
                          'Location': 1,
                          'Asset Tag': 1})
                     if not asset_info:
-                        logger.debug('Asset {} not found to check out '
-                                     'license {}. Check asset.'
-                                     .format(asset['comp_name'],
-                                             lic_name))
+                        assets_not_found.append(asset['comp_name'])
                         continue
                 # seat dictionary with all necessary info for creating seats
                 seat = {'license_id': license_id['License ID'],
@@ -235,9 +233,9 @@ class Licenses:
                 # if seat does not exist, add to upd_seat_add list
                 if not snipe_seat:
                     self.seats_add.append(seat)
-                    asset_count =+ 1
-            logger.debug('Check out license {} to {} assets'
-                         .format(lic_name, asset_count))
+                    asset_count += 1
+            logger.debug('Assets to check out - {}'
+                         .format(asset_count))
             snipe_seats = self.snipe_seat_col.find({'license_id': license_id})
             snipe_seats = list(snipe_seats)
             #  for each seat already in snipe, check if it still
@@ -255,8 +253,10 @@ class Licenses:
                 if item['asset_name'] not in comp_names:
                     self.seats_rem.append(item)
                     asset_ct += 1
-            logger.debug('Check in license {} from {} assets'
-                         .format(lic_name, asset_ct))
+            logger.debug('Assets to check in - {}'
+                         .format(asset_ct))
+        logger.debug('Assets not found. Check assets:')
+        logger.debug(pformat(assets_not_found))
 
     def get_licenses_delete(self):
         '''gets licenses that no longer are active in bigfix to remove from
