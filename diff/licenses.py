@@ -206,6 +206,25 @@ class Licenses:
                      'ID': 1,
                      'Location': 1,
                      'Asset Tag': 1})
+                if not asset_info:
+                    logger.debug('Asset {} with Mac Address {} '
+                                 'not found to check out license {}.'
+                                 'checking just the hostname'
+                                 .format(asset['comp_name'],
+                                         mac_addr['mac_addr'],
+                                         lic_name))
+                    asset_info = self.snipe_hw_col.find_one(
+                        {'Hostname': asset['comp_name']},
+                        {'_id': 0,
+                         'ID': 1,
+                         'Location': 1,
+                         'Asset Tag': 1})
+                    if not asset_info:
+                        logger.debug('Asset {} not found to check out '
+                                     'license {}. Check if item is deleted.'
+                                     .format(asset['comp_name'],
+                                             lic_name))
+                        continue
                 # seat dictionary with all necessary info for creating seats
                 seat = {'license_id': license_id['License ID'],
                         'assigned_asset': asset_info['ID'],
@@ -220,7 +239,7 @@ class Licenses:
                 # if seat does not exist, add to upd_seat_add list
                 if not snipe_seat:
                     self.seats_add.append(seat)
-                    logger.debug('Checking out license {} to asset {}'
+                    logger.debug('Check out license {} to asset {}'
                                  .format(lic_name, seat['asset_name']))
             snipe_seats = self.snipe_seat_col.find({'license_id': license_id})
             snipe_seats = list(snipe_seats)
@@ -237,8 +256,9 @@ class Licenses:
                 # from bigfix, add to the remove list
                 if item['asset_name'] not in comp_names:
                     self.seats_rem.append(item)
-                    logger.debug('Checking in license {} from asset {}'
+                    logger.debug('Check in license {} from asset {}'
                                  .format(lic_name, seat['asset_name']))
+
     def get_licenses_delete(self):
         '''gets licenses that no longer are active in bigfix to remove from
             snipeIT'''
