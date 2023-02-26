@@ -4,6 +4,7 @@ import pymongo
 from diff.arguments import Arguments
 from diff.get_data import getData
 from diff.licenses import Licenses
+from diff.seats import Seats
 
 client = pymongo.MongoClient("mongodb://localhost:27017/")
 software_db = client['software_inventory']
@@ -58,11 +59,18 @@ def run(args):
     lic_obj.create_license()
     # get all seat information for new licenses
     lic_obj.get_lic_seats_new()
-    # 
+    # get licenses that had any changes in seat numers
     lic_obj.update_license()
+    # for the updated licenses, get seats to check-in or check-out
     lic_obj.get_lic_seats_update()
+    # get seats to check-in if license is getting deleted
+    lic_obj.get_lic_seats_del()
+    # get licenses to delete if no longer in bigfix
     lic_obj.delete_license()
-    
+    seat_obj = Seats()
+    seat_obj.check_in(lic_obj.upd_seats_rem)
+    seat_obj.check_out(lic_obj.upd_seats_add)
+
 
 if __name__ == '__main__':
     args_obj = Arguments()

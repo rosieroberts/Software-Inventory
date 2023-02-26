@@ -5,7 +5,7 @@ from pprint import pformat
 import pymongo
 import requests
 from update_dbs import config as cfg
-s
+
 # get today's date
 today = date.today()
 today_date = today.strftime('%m-%d-%Y')
@@ -44,23 +44,12 @@ class Seats():
     # snipe hw collection (computers only col in software_inventory db)
     snipe_hw_col = software_db['snipe_hw']
 
-    def __init__(self) -> None:
-        # lists dictionaries of seats to check in or check out
-        # dictionaries contain asset_id and license_id
-        self.seat_check_in = []
-        self.seat_check_out = []
-
-    def get_seat_changes(self):
-        # get dictionaries of seats that need to be checked in
-        # get dictionaries of seats that need to be checked out
-        pass
-
-    def check_in(self):
+    def check_in(self, seats):
         # method for checking seats in
-        if len(self.seat_check_in) == 0:
+        if len(seats) == 0:
             return None
         ct = 0
-        for seat in self.seat_check_in:
+        for seat in seats:
             # for each seat checked out to asset
             license_id = seat['license_id']
             seat_id = seat['id']
@@ -123,12 +112,12 @@ class Seats():
                              'for license {}'
                              .format(license_id))
 
-    def check_out(self):
+    def check_out(self, seats):
         # method for checking seats out
-        if len(self.seat_check_out) == 0:
+        if len(seats) == 0:
             return None
         ct = 0
-        for seat in self.seat_check_out:
+        for seat in seats:
             # get asset information
             asset_info = self.snipe_hw_col.find_one({'ID': seat['asset_id']})
             # for each seat checked out to asset

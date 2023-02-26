@@ -146,9 +146,6 @@ class Licenses:
             # to find seats to update for those licenses only
             # check if license has only 100 seats free, if not, something
             # there was a change
-            if license['License ID'] == 265:
-                print(license)
-                print(item['count'], license['Total Seats'])
             if (int(item['count']) + 100 == int(license['Total Seats'])):
                 continue
             else:
@@ -242,13 +239,12 @@ class Licenses:
                 self.del_licenses.append(item)
 
     def get_lic_seats_del(self):
-        # get seats to check in 
+        # get seats to check in
         for license in self.del_licenses:
             del_seats = self.snipe_seat_col.find({'license_name': license})
             del_seats = list(del_seats)
             for seat in del_seats:
                 self.upd_seats_rem.append(seat)
-                print(seat)
 
     def create_license(self):
         '''If new licenses found update SnipeIT and databases'''
