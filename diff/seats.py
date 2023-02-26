@@ -47,7 +47,7 @@ class Seats():
     def check_in(self, seats):
         # method for checking seats in
         if len(seats) == 0:
-            return None
+            print('NO SEATS TO CHECK IN')
         ct = 0
         for seat in seats:
             # for each seat checked out to asset
@@ -118,7 +118,7 @@ class Seats():
     def check_out(self, seats):
         # method for checking seats out
         if len(seats) == 0:
-            return None
+            print('NO SEATS TO CHECK OUT')
         ct = 0
         for seat in seats:
             # get asset information

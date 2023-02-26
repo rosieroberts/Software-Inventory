@@ -111,7 +111,7 @@ class Licenses:
         # this information should already be mongo by the time this method
         # is called, but make sure you are aware of
         if len(self.new_licenses) == 0:
-            logger.debug('no seats to check-out')
+            logger.debug('no new seats to check-out')
         for lic in self.new_licenses:
             license_id = self.snipe_lic_col.find_one({'License Name': lic},
                                                      {'_id': 0,
@@ -176,14 +176,15 @@ class Licenses:
         if len(self.upd_licenses) == 0:
             logger.debug('no seats to update')
         for lic in self.upd_licenses:
-            print(lic)
+            lic_name = lic['sw']
+            print(lic_name)
             # get the license ID from snipe
-            license_id = self.snipe_lic_col.find_one({'License Name': lic},
+            license_id = self.snipe_lic_col.find_one({'License Name': lic_name},
                                                      {'_id': 0,
                                                       'License ID': 1})
             # get all computers associated with this license
             # from bigfix
-            bigfix_assets = self.licenses_col.find({'sw': lic},
+            bigfix_assets = self.licenses_col.find({'sw': lic_name},
                                                    {'_id': 0,
                                                     'comp_name': 1,
                                                     'sw': 1})
@@ -211,7 +212,7 @@ class Licenses:
                         'location': asset_info['Location'],
                         'asset_name': asset['comp_name'],
                         'asset_tag': asset_info['Asset Tag'],
-                        'license_name': lic}
+                        'license_name': lic_name}
                 # check if the seat already exists in snipeIT
                 snipe_seat = self.snipe_seat_col.find_one(
                     {'license_id': seat['license_id'],
@@ -219,7 +220,8 @@ class Licenses:
                 # if seat does not exist, add to upd_seat_add list
                 if not snipe_seat:
                     self.seats_add.append(seat)
-                    print('ADD', seat['license_id'], seat['asset_name'])
+                    logger.debug('Checking out license {} to asset {}'
+                                 .format(lic_name, seat['asset_name']))
             snipe_seats = self.snipe_seat_col.find({'license_id': license_id})
             snipe_seats = list(snipe_seats)
             #  for each seat already in snipe, check if it still
@@ -227,7 +229,7 @@ class Licenses:
             for item in snipe_seats:
                 # get computer names from bigfix
                 comp_names = self.licenses_col.find(
-                    {'sw': lic},
+                    {'sw': lic_name},
                     {'_id': 0, 'comp_name': 1})
                 comp_names = list(comp_names)
                 comp_names = [item['comp_names'] for item in comp_names]
@@ -235,8 +237,8 @@ class Licenses:
                 # from bigfix, add to the remove list
                 if item['asset_name'] not in comp_names:
                     self.seats_rem.append(item)
-                    print('REMOVE', item['license_id'], item['asset_name'])
-
+                    logger.debug('Checking in license {} from asset {}'
+                                 .format(lic_name, seat['asset_name']))
     def get_licenses_delete(self):
         '''gets licenses that no longer are active in bigfix to remove from
             snipeIT'''
@@ -321,6 +323,8 @@ class Licenses:
                                                    'Total Seats': 1})
             seat_amt = int(item['count']) + 100
             lic_name = item['sw']
+            if seat_amt == license['Total Seats']:
+                continue
             logger.debug('Updating license {} with {} seats'
                          .format(lic_name, seat_amt))
             url = cfg.api_url_software_lic.format(license['License ID'])
