@@ -50,7 +50,7 @@ def run(args):
     # argument passed if license argument is provided
     lic_obj.get_license_lists(lic_args)
     # find new licenses
-    lic_obj.get_licenses_create()
+    lic_obj.get_licenses_new()
     # find licenses that need to be checked-in our checked-out to assets
     lic_obj.get_licenses_update()
     # find licenses that need to be deleted
@@ -65,12 +65,11 @@ def run(args):
     lic_obj.get_lic_seats_update()
     # get seats to check-in if license is getting deleted
     lic_obj.get_lic_seats_del()
+    seat_obj = Seats()
+    seat_obj.check_in(lic_obj.seats_rem)
+    seat_obj.check_out(lic_obj.seats_add)
     # get licenses to delete if no longer in bigfix
     lic_obj.delete_license()
-    seat_obj = Seats()
-    seat_obj.check_in(lic_obj.upd_seats_rem)
-    seat_obj.check_out(lic_obj.upd_seats_add)
-
 
 if __name__ == '__main__':
     args_obj = Arguments()

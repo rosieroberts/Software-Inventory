@@ -50,14 +50,19 @@ class Licenses:
     computer_info_col = software_db['computer_info']
 
     def __init__(self):
+        # current licenses to compare
         self.bigfix_licenses = []
         self.snipe_licenses = []
+        # new licenses. New seats found go to seats_add
         self.new_licenses = []
-        self.new_seats = []
-        self.upd_licenses = []
-        self.upd_seats_add = []
-        self.upd_seats_rem = []
+        # licenses to delete. Seats to delete go to seats_rem
         self.del_licenses = []
+        # licenses that need to be updated. Update seats go to
+        # seats_add and seats_rem
+        self.upd_licenses = []
+        # check-in and check-out seats
+        self.seats_add = []
+        self.seats_rem = []
 
     def get_license_lists(self, args=None):
         ''' Gets license lists from licenses_w_count (BigFix)
@@ -87,7 +92,7 @@ class Licenses:
         for item in lic_list:
             self.bigfix_licenses.append(item)
 
-    def get_licenses_create(self):
+    def get_licenses_new(self):
         '''gets total list of unique licenses if not already in snipeIT'''
         # for each of the bigfix licenses
         for item in self.bigfix_licenses:
@@ -104,7 +109,9 @@ class Licenses:
         # in order to get seat information a license needs to be created first
         # then get the license id from the POST response in 'create_license()
         # this information should already be mongo by the time this method
-        # is called, but make sure you are aware of this
+        # is called, but make sure you are aware of
+        if len(self.new_licenses) == 0:
+            logger.debug('no seats to check-out')
         for lic in self.new_licenses:
             license_id = self.snipe_lic_col.find_one({'License Name': lic},
                                                      {'_id': 0,
@@ -132,7 +139,7 @@ class Licenses:
                         'asset_name': asset['comp_name'],
                         'asset_tag': asset_info['Asset Tag'],
                         'license_name': lic}
-                self.new_seats.append(seat)
+                self.seats_add.append(seat)
 
     def get_licenses_update(self):
         '''gets licenses that have different seat amounts to update in snipeIT'''
@@ -147,6 +154,8 @@ class Licenses:
             # check if license has only 100 seats free, if not, something
             # there was a change
             if (int(item['count']) + 100 == int(license['Total Seats'])):
+                if int(license['Free Seats'] > 100):
+                    self.upd_licenses.append(item)
                 continue
             else:
                 # if the seat amount is not right, update
@@ -163,7 +172,8 @@ class Licenses:
         '''Gets seat information for licenses with changes since last run'''
         # each license that had different seat amounts compared to
         # the last run
-        print('seats_update')
+        if len(self.upd_licenses) == 0:
+            logger.debug('no seats to update')
         for lic in self.upd_licenses:
             print(lic)
             # get the license ID from snipe
@@ -207,7 +217,7 @@ class Licenses:
                      'assigned_asset': seat['assigned_asset']})
                 # if seat does not exist, add to upd_seat_add list
                 if not snipe_seat:
-                    self.upd_seats_add.append(seat)
+                    self.seats_add.append(seat)
                     print('ADD', seat['license_id'], seat['asset_name'])
             snipe_seats = self.snipe_seat_col.find({'license_id': license_id})
             snipe_seats = list(snipe_seats)
@@ -223,7 +233,7 @@ class Licenses:
                 # if computer name not in list of computers with this license
                 # from bigfix, add to the remove list
                 if item['asset_name'] not in comp_names:
-                    self.upd_seats_rem.append(item)
+                    self.seats_rem.append(item)
                     print('REMOVE', item['license_id'], item['asset_name'])
 
     def get_licenses_delete(self):
@@ -240,13 +250,15 @@ class Licenses:
 
     def get_lic_seats_del(self):
         # get seats to check in
+        if len(self.del_licenses) == 0:
+            logger.debug('no seats to check-in')
         for license in self.del_licenses:
             del_seats = self.snipe_seat_col.find(
                 {'license_name': license,
                  'assigned_asset': {'$ne': None}})
             del_seats = list(del_seats)
             for seat in del_seats:
-                self.upd_seats_rem.append(seat)
+                self.seats_rem.append(seat)
 
     def create_license(self):
         '''If new licenses found update SnipeIT and databases'''
