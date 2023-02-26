@@ -110,9 +110,9 @@ class Licenses:
                                                      {'_id': 0,
                                                       'License ID': 1})
             bigfix_assets = self.licenses_col.find({'sw': lic},
-                                            {'_id': 0,
-                                             'comp_name': 1,
-                                             'sw': 1})
+                                                   {'_id': 0,
+                                                    'comp_name': 1,
+                                                    'sw': 1})
             bigfix_assets = list(bigfix_assets)
             for asset in bigfix_assets:
                 mac_addr = self.computer_info_col.find_one(
@@ -146,6 +146,9 @@ class Licenses:
             # to find seats to update for those licenses only
             # check if license has only 100 seats free, if not, something
             # there was a change
+            if license['License ID'] == 265:
+                print(license)
+                print(item['count'], license['Total Seats'])
             if (int(item['count']) + 100 == int(license['Total Seats'])):
                 continue
             else:
@@ -155,13 +158,17 @@ class Licenses:
                              .format(item['sw'],
                                      license['Total Seats'],
                                      item['count']))
+                print('_____')
+                print(item)
                 self.upd_licenses.append(item)
 
     def get_lic_seats_update(self):
         '''Gets seat information for licenses with changes since last run'''
         # each license that had different seat amounts compared to
         # the last run
+        print('seats_update')
         for lic in self.upd_licenses:
+            print(lic)
             # get the license ID from snipe
             license_id = self.snipe_lic_col.find_one({'License Name': lic},
                                                      {'_id': 0,
@@ -182,7 +189,7 @@ class Licenses:
                     {'comp_name': asset['comp_name']},
                     {'_id': 0,
                      'mac_addr': 1})
-                # get computer info from snipe_hw 
+                # get computer info from snipe_hw
                 asset_info = self.snipe_hw_col.find_one(
                     {'Hostname': asset['comp_name'],
                      'Mac Address': mac_addr['mac_addr']},
@@ -210,7 +217,7 @@ class Licenses:
             #  for each seat already in snipe, check if it still
             # supposed to be checked out, or if it should be removed
             for item in snipe_seats:
-                # get computer names from bigfix 
+                # get computer names from bigfix
                 comp_names = self.licenses_col.find(
                     {'sw': lic},
                     {'_id': 0, 'comp_name': 1})
