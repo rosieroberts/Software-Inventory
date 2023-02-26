@@ -241,6 +241,15 @@ class Licenses:
                              .format(item))
                 self.del_licenses.append(item)
 
+    def get_lic_seats_del(self):
+        # get seats to check in 
+        for license in self.del_licenses:
+            del_seats = self.snipe_seat_col.find({'license_name': license})
+            del_seats = list(del_seats)
+            for seat in del_seats:
+                self.upd_seats_rem.append(seat)
+                print(seat)
+
     def create_license(self):
         '''If new licenses found update SnipeIT and databases'''
         ct = 0
