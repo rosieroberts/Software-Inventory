@@ -140,6 +140,12 @@ class Licenses:
                                                    'License Name': 1,
                                                    'License ID': 1,
                                                    'Total Seats': 1})
+            # get licenses that had any changes in seat numbers to update
+            # seats for those licenses only
+            print('______')
+            print(item['count'], license['Total Seats'])
+            if (int(item['count']) != int(license['Total Seats']) - 100):
+                print(item['count'], license['Total Seats'] - 100)
             # check if license has more than 50 empty seats
             # or no more than 100
             if (int(item['count']) + 100 >= int(license['Total Seats']) and

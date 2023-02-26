@@ -97,6 +97,8 @@ class SnipeSoftware:
                                             params=querystring)
                 content = response.json()
                 for item in content['rows']:
+                    if item['id'] == 289:
+                        print(item['id'], item['seats'], item['free_seats_count'])
                     # get all license information and add it to a dictionary
                     snipe_upd_date = datetime.strptime(item['updated_at']['datetime'],
                                                        '%Y-%m-%d %H:%M:%S')
@@ -114,10 +116,10 @@ class SnipeSoftware:
         # adds license information from snipe-it to mongoDB
         try:
             if len(self.license_info) > 0:
-                self.snipe_lic.delete_many({})
-            if self.snipe_lic.count() == 0:
-                self.snipe_lic.insert_many(self.license_info)
-            if self.snipe_lic.count() > 0:
+                lic_del = self.snipe_lic.delete_many({})
+            if lic_del:
+                lic_add = self.snipe_lic.insert_many(self.license_info)
+            if lic_add:
                 logger.debug('added license information to mongoDB')
         except(pymongo.errors.PyMongoError):
             logger.exception('error adding snipe license information to mongoDB')
@@ -197,9 +199,11 @@ class SnipeSoftware:
         try:
             self.snipe_seat_col.delete_many({})
             # mongoDB adds no more than 1000 records at a time
+            i = 1000
             for seat in range(0, len(self.seat_info), 1000):
                 self.snipe_seat_col.insert_many(self.seat_info[seat:seat + 1000])
-
+                i += 1000
+                print(i)
             logger.info('Added all license seats to mongoDB')
 
         except(pymongo.errors.PyMongoError):
