@@ -241,16 +241,16 @@ class Licenses:
             #  for each seat already in snipe, check if it still
             # supposed to be checked out, or if it should be removed
             asset_ct = 0
+            # get computer names from bigfix
+            comp_names = self.licenses_col.find(
+                {'sw': lic_name},
+                {'_id': 0, 'comp_name': 1})
+            comp_names = list(comp_names)
+            print(comp_names)
+            comp_names = [item['comp_name'] for item in comp_names]
+            print(comp_names)
             logger.debug('Seats to check in:')
             for item in snipe_seats:
-                # get computer names from bigfix
-                comp_names = self.licenses_col.find(
-                    {'sw': lic_name},
-                    {'_id': 0, 'comp_name': 1})
-                comp_names = list(comp_names)
-                print(comp_names)
-                comp_names = [item['comp_name'] for item in comp_names]
-                print(comp_names)
                 # if computer name not in list of computers with this license
                 # from bigfix, add to the remove list
                 if item['asset_name'] not in comp_names:
