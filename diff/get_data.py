@@ -51,8 +51,6 @@ class getData:
         self.asset_list_hw = []
         # assets info for assets checked out to license provided in args
         self.asset_list_sw = []
-        # seat info for assets in asset_list_hw with a license
-        self.license_list = []
         # license names for any license arguments if provided
         self.arg_licenses = []
 
@@ -67,14 +65,11 @@ class getData:
     def get_asset_list(self, asset_list):
         '''takes in list of arguments such as asset hostnames, club, asset_tag,
         and returns list of dictionaries from snipe_hw db. '''
-
         if not asset_list:
             return None
-
         club_rgx = compile(r'((club)[\d]{3})')
         asset_tag_rgx = compile(r'([0-9]{3}[A-Z]{1}-[A-Za-z0-9]{4})')
         hostname_rgx = compile(r'[A-Z]{1,3}[PC]{1}\d{3}(-[\d]{1,2})*')
-
         deleted_assets_ct = 0
         not_found_assets_ct = 0
         found_assets_ct = 0
@@ -91,7 +86,6 @@ class getData:
             else:
                 # skip those args that are not in the right format
                 continue
-
             assets = list(assets)
             if assets:
                 for asset in assets:
@@ -103,7 +97,8 @@ class getData:
                     del_asset = self.deleted.find_one({'asset_tag': item})
                     if not del_asset:
                         continue
-                    if del_asset['Category'] != 'Computer':
+                    if del_asset['Category'] != 'Computer' or \
+                            del_asset['Category'] != 'POS':
                         continue
                     asset = {'ID': del_asset['id'],
                              'Asset Tag': del_asset['asset_tag'],
@@ -117,28 +112,6 @@ class getData:
                     # skip args in the right format but are not found anywhere
                     not_found_assets_ct += 1
                     continue
-        # I think I can remove this section. check.
-        if len(self.asset_list_hw) > 0:
-            for item in self.asset_list_hw:
-                # getting licenseID associated with each assetID
-                license = self.snipe_seats.find({'assigned_asset': item['ID']})
-                if not license:
-                    logger.debug('License seats are not found for {}'
-                                 .format(item['Asset Tag']))
-                    sys.exit()
-
-                license = list(license)
-                logger.debug('asset_tag {}/asset ID {} has {} licenses'
-                             .format(item['Asset Tag'],
-                                     item['ID'],
-                                     len(license)))
-                for lic in license:
-                    seat = {'assigned_asset': item['ID'],
-                            'license_id': lic['license_id'],
-                            'seat_id': lic['id'],
-                            'asset_tag': lic['asset_tag']}
-                    self.license_list.append(seat)
-
         # only found assets and deleted assets associated with a seat will be
         # returned. This message for review.
         logger.debug('Asset {}'.format(item['Asset Tag']))
@@ -153,12 +126,9 @@ class getData:
             arguments take list of licenses and return list of assets that are
             associated with that license this function only runs
             when -l <licenseID> is added as an argument '''
-
         license_rgx = compile(r'([\d]{1,3})')
-
         if not lic_list:
             return None
-
         deleted_assets_ct = 0
         not_found_assets_ct = 0
         found_assets_ct = 0
@@ -225,3 +195,4 @@ class getData:
             logger.debug('Assets not found {}'.format(not_found_assets_ct))
         if deleted_assets_ct > 0:
             logger.debug('Assets deleted {}'.format(deleted_assets_ct))
+
