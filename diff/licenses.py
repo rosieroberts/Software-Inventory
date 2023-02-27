@@ -193,6 +193,7 @@ class Licenses:
             # check if there is a seat already in snipeIT
             # if not, a new seat needs to be added
             asset_count = 0
+            logger.debug('Seats to check out:')
             for asset in bigfix_assets:
                 # get mac addr from bigfix
                 mac_addr = self.computer_info_col.find_one(
@@ -232,29 +233,32 @@ class Licenses:
                 # if seat does not exist, add to upd_seat_add list
                 if not snipe_seat:
                     self.seats_add.append(seat)
+                    logger.debug(seat['asset_name'])
                     asset_count += 1
             snipe_seats = self.snipe_seat_col.find(
-                {'license_id': license_id['license_id']})
+                {'license_id': license_id['License ID']})
             snipe_seats = list(snipe_seats)
             #  for each seat already in snipe, check if it still
             # supposed to be checked out, or if it should be removed
             asset_ct = 0
+            logger.debug('Seats to check in:')
             for item in snipe_seats:
                 # get computer names from bigfix
                 comp_names = self.licenses_col.find(
                     {'sw': lic_name},
                     {'_id': 0, 'comp_name': 1})
                 comp_names = list(comp_names)
-                comp_names = [item['comp_names'] for item in comp_names]
+                comp_names = [item['comp_name'] for item in comp_names]
                 # if computer name not in list of computers with this license
                 # from bigfix, add to the remove list
                 if item['asset_name'] not in comp_names:
                     self.seats_rem.append(item)
+                    logger.debug(item['asset_name'])
                     asset_ct += 1
             total = self.lic_w_ct_col.find_one({'sw': lic_name},
                                                {'_id': 0, 'count': 1})
             free = self.snipe_lic_col.find_one({'License Name': lic_name},
-                                               {'_id':0, 'Free Seats': 1})
+                                               {'_id': 0, 'Free Seats': 1})
             logger.debug('Total count of assets for license - {}'
                          .format(total['count']))
             logger.debug('Total Free Seats for license in SnipeIT - {}'
