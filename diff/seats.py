@@ -123,11 +123,19 @@ class Seats():
         ct = 0
         for seat in seats:
             # get asset information
-            asset_info = self.snipe_hw_col.find_one({'ID': seat['asset_id']})
-            # for each seat checked out to asset
+            asset_info = self.snipe_hw_col.find_one({'ID': seat['assigned_asset']})
+            # find an unassigned seat to check out asset
+            empty_seat = self.snipe_seat_col.find_one(
+                {'assigned_asset': None,
+                 'license_id': license['License ID']},
+                {'id': 1,
+                 'assigned_asset': 1,
+                 'name': 1,
+                 'location': 1,
+                 '_id': 0})
             license_id = seat['license_id']
-            seat_id = seat['id']
-            asset_id = seat['asset_id']
+            seat_id = empty_seat['id']
+            asset_id = seat['assigned_asset']
             print('&&&&&&')
             print(license_id, seat_id, asset_id)
             # to prevent API errors
