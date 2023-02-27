@@ -248,12 +248,14 @@ class Licenses:
                     {'sw': lic_name},
                     {'_id': 0, 'comp_name': 1})
                 comp_names = list(comp_names)
+                print(comp_names)
                 comp_names = [item['comp_name'] for item in comp_names]
+                print(comp_names)
                 # if computer name not in list of computers with this license
                 # from bigfix, add to the remove list
                 if item['asset_name'] not in comp_names:
                     self.seats_rem.append(item)
-                    logger.debug(item['asset_name'])
+                    logger.debug(item)
                     asset_ct += 1
             total = self.lic_w_ct_col.find_one({'sw': lic_name},
                                                {'_id': 0, 'count': 1})
