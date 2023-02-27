@@ -51,7 +51,7 @@ def run(args):
     # argument passed if license argument is provided
     lic_obj.get_license_lists(lic_args)
     # find new licenses
-    lic_obj.get_licenses_new()
+    lic_obj.get_licenses_new(lic_obj.lic_arguments)
     seat_obj = Seats()
     new_lic_ct = 0
     for license in lic_obj.new_licenses:
@@ -66,7 +66,7 @@ def run(args):
         seat_obj.check_out(lic_obj.seats_add)
 
     # find licenses that need to be checked-in our checked-out to assets
-    lic_obj.get_licenses_update()
+    lic_obj.get_licenses_update(lic_obj.lic_arguments)
     upd_lic_ct = 0
     for license in lic_obj.upd_licenses:
         # add sleep to prevent API errors
@@ -82,7 +82,7 @@ def run(args):
         seat_obj.check_in(lic_obj.seats_rem)
 
     # find licenses that need to be deleted
-    lic_obj.get_licenses_delete()
+    lic_obj.get_licenses_delete(lic_obj.lic_arguments)
     del_lic_ct = 0
     for license in lic_obj.del_licenses:
         lic_obj.get_lic_seats_del(license)

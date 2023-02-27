@@ -54,11 +54,11 @@ class Seats():
             license_id = seat['license_id']
             seat_id = seat['id']
             asset_id = seat['assigned_asset']
-            print('___')
-            print(license_id, seat_id, asset_id)
+            logger.debug('CHECKING IN - license {}, seat {}, asset {}'
+                         .format(license_id, seat_id, asset_id))
             # to prevent API errors
-            if ct == 110:
-                sleep(60)
+            if ct == 118:
+                sleep(61)
                 ct = 0
             url = cfg.api_url_software_seat.format(license_id, seat_id)
             item_str = str({'asset_id': ''})
@@ -67,29 +67,33 @@ class Seats():
                                         url=url,
                                         data=payload,
                                         headers=cfg.api_headers)
-            logger.debug(pformat(response.text))
             status_code = response.status_code
             ct += 1
-            if status_code != 200:
-                logger.debug('error, there was something wrong removing '
-                             'license {} from asset {}'
-                             .format(license_id,
-                                     asset_id))
-                continue
             content = response.json()
-            status = str(content['status'])
-            print(status)  # remove this line later
-            if status != 'success':
-                logger.debug('error, license {} removal not successful '
-                             'for asset {}'
-                             .format(license_id, asset_id))
+            if status_code != 200:
                 message = str(content['messages'])
-                if message == 'Target not found':
+                if message == 'Too many requests':
+                    logger.debug(message)
+                else:
+                    logger.debug('error, there was something wrong removing '
+                                 'seat to license {} to asset {}'
+                                 .format(license_id,
+                                         asset_id))
+                    logger.debug(pformat(response.text))
+                continue
+            status = str(content['status'])
+            if status != 'success':
+                message = str(content['messages'])
+                if message == 'Seat not found':
                     logger.debug('error, asset {} is not currently active, '
                                  'cannot update license. Asset needs to be '
                                  'restored in SnipeIT first.'
                                  .format(asset_id))
-                    self.not_added.append(asset_id)
+                else:
+                    logger.debug('error, license {} removal not successful '
+                                 'for asset {}'
+                                 .format(license_id, asset_id))
+                    logger.debug(pformat(response.text))
                 continue
             # updating seat in Mongo snipe_seat collection
             seat_upd = self.snipe_seat_col.update_one(
@@ -123,7 +127,8 @@ class Seats():
         ct = 0
         for seat in seats:
             # get asset information
-            asset_info = self.snipe_hw_col.find_one({'ID': seat['assigned_asset']})
+            asset_info = self.snipe_hw_col.find_one(
+                {'ID': seat['assigned_asset']})
             # find an unassigned seat to check out asset
             empty_seat = self.snipe_seat_col.find_one(
                 {'assigned_asset': None,
@@ -133,14 +138,19 @@ class Seats():
                  'name': 1,
                  'location': 1,
                  '_id': 0})
+            if not empty_seat:
+                logger.debug('error, there are no empty seats left. '
+                             'check license {}'
+                             .format(seat['license_id']))
+                return
             license_id = seat['license_id']
             seat_id = empty_seat['id']
             asset_id = seat['assigned_asset']
-            print('&&&&&&')
-            print(license_id, seat_id, asset_id)
+            logger.debug('CHECKING OUT - license {}, seat {}, asset {}'
+                         .format(license_id, seat_id, asset_id))
             # to prevent API errors
-            if ct == 110:
-                sleep(60)
+            if ct == 118:
+                sleep(61)
                 ct = 0
             url = cfg.api_url_software_seat.format(license_id, seat_id)
             item_str = str({'asset_id': asset_id})
@@ -149,29 +159,33 @@ class Seats():
                                         url=url,
                                         data=payload,
                                         headers=cfg.api_headers)
-            logger.debug(pformat(response.text))
             status_code = response.status_code
+            content = response.json()
             ct += 1
             if status_code != 200:
-                logger.debug('error, there was something wrong adding seat '
-                             'for license {} to asset {}'
-                             .format(license_id,
-                                     asset_id))
-                continue
-            content = response.json()
-            status = str(content['status'])
-            print(status)  # remove this line later
-            if status != 'success':
-                logger.debug('error, license {} check-out not successful '
-                             'for asset {}'
-                             .format(license_id, asset_id))
                 message = str(content['messages'])
-                if message == 'Target not found':
+                if message == 'Too many requests':
+                    logger.debug(message)
+                else:
+                    logger.debug('error, there was something wrong adding seat '
+                                 'for license {} to asset {}'
+                                 .format(license_id,
+                                         asset_id))
+                    logger.debug(pformat(response.text))
+                continue
+            status = str(content['status'])
+            if status != 'success':
+                message = str(content['messages'])
+                if message == 'Seat not found':
                     logger.debug('error, asset {} is not currently active, '
                                  'cannot update license. Asset needs to be '
                                  'restored in SnipeIT first.'
                                  .format(asset_id))
-                    self.not_added.append(asset_id)
+                else:
+                    logger.debug('error, license {} check-out not successful '
+                                 'for asset {}'
+                                 .format(license_id, asset_id))
+                    logger.debug(pformat(response.text))
                 continue
             # updating seat in Mongo snipe_seat collection
             seat_upd = self.snipe_seat_col.update_one(

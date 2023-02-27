@@ -50,8 +50,9 @@ class Licenses:
 
     def __init__(self):
         # current licenses to compare
-        self.bigfix_licenses = []
-        self.snipe_licenses = []
+        self.bigfix_licenses = tuple
+        self.snipe_licenses = tuple
+        self.lic_arguments = tuple
         # new licenses from get_licenses_new.
         # New seats found go to seats_add
         self.new_licenses = []
@@ -72,10 +73,10 @@ class Licenses:
         # bigfix
         if args is not None:
             # only get list of licenses in arguments to update
-            lic_list = []
+            lic_args_list = []
             for lic in args:
                 lic_name = self.lic_w_ct_col.find_one({'sw': lic})
-                lic_list.append(lic_name)
+                lic_args_list.append(lic_name)
         else:
             # else update all licenses
             lic_list = self.lic_w_ct_col.find()
@@ -85,15 +86,26 @@ class Licenses:
         snipe_lic = list(snipe_lic)
 
         # create list of all license names in snipe-it
-        for item in snipe_lic:
-            self.snipe_licenses.append(item['License Name'])
+        snipe_lic = [item['License Name'] for item in snipe_lic]
+        self.snipe_licenses = tuple(snipe_lic)
 
-        # create list of all license names in bigfix
-        for item in lic_list:
-            self.bigfix_licenses.append(item)
+        # create tuple of all license names in bigfix
+        self.bigfix_licenses = tuple(lic_list)
+        # create tuple of license arguments if any
+        if lic_args_list:
+            self.lic_arguments = tuple(lic_args_list)
 
-    def get_licenses_new(self):
+    def get_licenses_new(self, args=None):
         '''gets total list of unique licenses if not already in snipeIT'''
+        if args:
+            for item in args:
+                if item['sw'] in self.bigfix_licenses and \
+                        item['sw'] not in self.snipe_licenses:
+                    # if license is not found, create a new license
+                    logger.debug('Found new license {} '
+                                 .format(item['sw']))
+                    self.new_licenses.append(item)
+            return
         # for each of the bigfix licenses
         for item in self.bigfix_licenses:
             # adding 100 extra seats to prevent future errors
@@ -138,9 +150,15 @@ class Licenses:
                     'license_name': new_license}
             self.seats_add.append(seat)
 
-    def get_licenses_update(self):
+    def get_licenses_update(self, args=None):
         '''gets licenses that have different seat amounts to update in snipeIT'''
-        for item in self.bigfix_licenses:
+        upd_licenses = [item['sw'] for item in self.bigfix_licenses]
+        if args:
+            upd_licenses = []
+            for item in args:
+                if item['sw'] in self.bigfix_licenses:
+                    upd_licenses.append(item['sw'])
+        for item in self.upd_licenses:
             license = self.snipe_lic_col.find_one({'License Name': item['sw']},
                                                   {'_id': 0,
                                                    'License Name': 1,
@@ -268,11 +286,20 @@ class Licenses:
         logger.debug('Assets not found. Check assets:')
         logger.debug(pformat(assets_not_found))
 
-    def get_licenses_delete(self):
+    def get_licenses_delete(self, args=None):
         '''gets licenses that no longer are active in bigfix to remove from
             snipeIT'''
         # get list of license names
         bigfix_licenses = [item['sw'] for item in self.bigfix_licenses]
+        if args:
+            for item in args:
+                if item['sw'] in self.snipe_licenses and \
+                        item['sw'] not in bigfix_licenses:
+                    # if license is not found, create a new license
+                    logger.debug('Found removed license {} '
+                                 .format(item))
+                    self.del_licenses.append(item)
+            return
         for item in self.snipe_licenses:
             if item not in bigfix_licenses:
                 # if license is not found, create a new license
