@@ -250,7 +250,10 @@ class Licenses:
                 if item['asset_name'] not in comp_names:
                     self.seats_rem.append(item)
                     asset_ct += 1
-            logger.debug('Total count of assets for license - {}')
+            total = self.lic_w_ct_col.find_one({'sw': lic_name},
+                                               {'_id': 0, 'count': 1})
+            logger.debug('Total count of assets for license - {}'
+                         .format(total['count']))
             logger.debug('Assets to check out - {}'
                          .format(asset_count))
             logger.debug('Assets to check in - {}'
