@@ -233,7 +233,8 @@ class Licenses:
                 if not snipe_seat:
                     self.seats_add.append(seat)
                     asset_count += 1
-            snipe_seats = self.snipe_seat_col.find({'license_id': license_id})
+            snipe_seats = self.snipe_seat_col.find(
+                {'license_id': license_id['license_id']})
             snipe_seats = list(snipe_seats)
             #  for each seat already in snipe, check if it still
             # supposed to be checked out, or if it should be removed
@@ -252,8 +253,12 @@ class Licenses:
                     asset_ct += 1
             total = self.lic_w_ct_col.find_one({'sw': lic_name},
                                                {'_id': 0, 'count': 1})
+            free = self.snipe_lic_col.find_one({'License Name': lic_name},
+                                               {'_id':0, 'Free Seats': 1})
             logger.debug('Total count of assets for license - {}'
                          .format(total['count']))
+            logger.debug('Total Free Seats for license in SnipeIT - {}'
+                         .format(free['Free Seats']))
             logger.debug('Assets to check out - {}'
                          .format(asset_count))
             logger.debug('Assets to check in - {}'
