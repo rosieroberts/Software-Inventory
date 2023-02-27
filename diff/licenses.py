@@ -10,7 +10,7 @@ from update_dbs import config as cfg
 today = date.today()
 today_date = today.strftime('%m-%d-%Y')
 
-logger = getLogger('create_license')
+logger = getLogger('licenses')
 # TODO: set to ERROR later on after setup
 logger.setLevel(DEBUG)
 
@@ -165,8 +165,6 @@ class Licenses:
                              .format(item['sw'],
                                      license['Total Seats'],
                                      item['count']))
-                print('_____')
-                print(item)
                 self.upd_licenses.append(item)
 
     def get_lic_seats_update(self):
@@ -178,7 +176,7 @@ class Licenses:
             logger.debug('no seats to update')
         for lic in self.upd_licenses:
             lic_name = lic['sw']
-            print(lic_name)
+            logger.debug(lic_name)
             # get the license ID from snipe
             license_id = self.snipe_lic_col.find_one({'License Name': lic_name},
                                                      {'_id': 0,
@@ -296,7 +294,6 @@ class Licenses:
             item_dict = str({'name': lic_name,
                              'seats': seat_amt,
                              'category_id': '11'})  # category for API (software)
-            logger.debug(item_dict)
             logger.debug('Adding new license {} with {} seats'
                          .format(lic_name, seat_amt))
             # url for snipe-it licenses
@@ -349,6 +346,7 @@ class Licenses:
             url = cfg.api_url_software_lic.format(license['License ID'])
             item_str = str({'seats': seat_amt})
             payload = item_str.replace('\'', '\"')
+            print('*********')
             print(item['count'], payload)
             response = requests.request("PATCH",
                                         url=url,

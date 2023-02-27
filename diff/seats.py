@@ -54,6 +54,7 @@ class Seats():
             license_id = seat['license_id']
             seat_id = seat['id']
             asset_id = seat['assigned_asset']
+            print('___')
             print(license_id, seat_id, asset_id)
             # to prevent API errors
             if ct == 110:
@@ -127,6 +128,7 @@ class Seats():
             license_id = seat['license_id']
             seat_id = seat['id']
             asset_id = seat['asset_id']
+            print('&&&&&&')
             print(license_id, seat_id, asset_id)
             # to prevent API errors
             if ct == 110:
