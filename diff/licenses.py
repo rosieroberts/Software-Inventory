@@ -171,12 +171,13 @@ class Licenses:
         '''Gets seat information for licenses with changes since last run'''
         # each license that had different seat amounts compared to
         # the last run
-        assets_not_found = []
         if len(self.upd_licenses) == 0:
             logger.debug('no seats to update')
         for lic in self.upd_licenses:
+            assets_not_found = []
             lic_name = lic['sw']
-            logger.debug(lic_name)
+            logger.debug('___________________________________________')
+            logger.debug(lic_name.upper())
             # get the license ID from snipe
             license_id = self.snipe_lic_col.find_one({'License Name': lic_name},
                                                      {'_id': 0,
@@ -232,8 +233,6 @@ class Licenses:
                 if not snipe_seat:
                     self.seats_add.append(seat)
                     asset_count += 1
-            logger.debug('Assets to check out - {}'
-                         .format(asset_count))
             snipe_seats = self.snipe_seat_col.find({'license_id': license_id})
             snipe_seats = list(snipe_seats)
             #  for each seat already in snipe, check if it still
@@ -251,10 +250,15 @@ class Licenses:
                 if item['asset_name'] not in comp_names:
                     self.seats_rem.append(item)
                     asset_ct += 1
+            logger.debug('Total count of assets for license - {}')
+            logger.debug('Assets to check out - {}'
+                         .format(asset_count))
             logger.debug('Assets to check in - {}'
                          .format(asset_ct))
-        logger.debug('Assets not found. Check assets:')
-        logger.debug(pformat(assets_not_found))
+            logger.debug('Assets that cannot be found - {}'
+                         .format(len(assets_not_found)))
+            logger.debug('Assets not found. Check assets:')
+            logger.debug(pformat(assets_not_found))
 
     def get_licenses_delete(self):
         '''gets licenses that no longer are active in bigfix to remove from
@@ -346,8 +350,6 @@ class Licenses:
             url = cfg.api_url_software_lic.format(license['License ID'])
             item_str = str({'seats': seat_amt})
             payload = item_str.replace('\'', '\"')
-            print('*********')
-            print(item['count'], payload)
             response = requests.request("PATCH",
                                         url=url,
                                         data=payload,
