@@ -65,9 +65,10 @@ class SnipeHardware:
                                             params=querystring)
                 content = response.json()
                 for item in content['rows']:
-                    # only assets that have a hostname and it is category 'computer'
+                    # only assets that have a hostname and it is category
+                    # computer' or 'POS'
                     if item['custom_fields']['Hostname']['value'] != '' and \
-                       item['category']['id'] == 2:
+                       (item['category']['id'] == 2 or item['category']['id'] == 6):
                         device = {'ID': item['id'],
                                   'Asset Tag': item['asset_tag'],
                                   'IP': item['custom_fields']['IP']['value'],
