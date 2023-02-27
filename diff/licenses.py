@@ -110,6 +110,7 @@ class Licenses:
         # then get the license id from the POST response in 'create_license()
         # this information should already be mongo by the time this method
         # is called, but make sure you are aware of
+        print(new_license, 'get_lic_seats_new')
         license_id = self.snipe_lic_col.find_one({'License Name': new_license},
                                                  {'_id': 0,
                                                  'License ID': 1})
@@ -168,6 +169,7 @@ class Licenses:
         '''Gets seat information for licenses with changes since last run'''
         # each license that had different seat amounts compared to
         # the last run
+        print(upd_license, 'get_lic_seat_update')
         assets_not_found = []
         lic_name = upd_license['sw']
         logger.debug('___________________________________________')
@@ -282,6 +284,7 @@ class Licenses:
 
     def get_lic_seats_del(self, del_license):
         # get seats to check in
+        print(del_license, 'get_lic_seats_del')
         del_seats = self.snipe_seat_col.find(
             {'license_name': del_license,
                 'assigned_asset': {'$ne': None}})
@@ -292,6 +295,7 @@ class Licenses:
     def create_license(self, new_license):
         '''If new licenses found update SnipeIT and databases'''
         # adding 100 extra seats to prevent future errors
+        print(new_license, 'create_license')
         seat_amt = int(new_license['count']) + 100
         lic_name = new_license['sw']
         item_dict = str({'name': lic_name,
@@ -328,6 +332,7 @@ class Licenses:
     def update_license(self, upd_license):
         '''If existing licenses have wrong amount of license seats update
         SnipeIT and databases'''
+        print(upd_license, 'upd_license')
         license = self.snipe_lic_col.find_one({'License Name': upd_license['sw']},
                                               {'_id': 0,
                                                'License Name': 1,
@@ -365,6 +370,7 @@ class Licenses:
 
     def delete_license(self, del_license):
         ''' delete removed licenses from snipeIT and databases'''
+        print(del_license, 'delete_license')
         license = self.snipe_lic_col.find_one({'License Name': del_license},
                                               {'_id': 0,
                                                'License ID': 1,

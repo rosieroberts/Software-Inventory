@@ -110,7 +110,7 @@ class Seats():
             lic_upd = self.snipe_lic_col.update_one(
                 {'License ID': license_id},
                 {'$set':
-                    {'Free Seats': int(free_seats) + 1}})
+                    {'Free Seats': int(free_seats['Free Seats']) + 1}})
             if lic_upd is False:
                 logger.debug('error, could not update snipe_lic collection '
                              'for license {}'
@@ -127,7 +127,7 @@ class Seats():
             # find an unassigned seat to check out asset
             empty_seat = self.snipe_seat_col.find_one(
                 {'assigned_asset': None,
-                 'license_id': license['License ID']},
+                 'license_id': seat['license_id']},
                 {'id': 1,
                  'assigned_asset': 1,
                  'name': 1,
@@ -191,7 +191,7 @@ class Seats():
             lic_upd = self.snipe_lic_col.update_one(
                 {'License ID': license_id},
                 {'$set':
-                    {'Free Seats': int(free_seats) - 1}})
+                    {'Free Seats': int(free_seats['Free Seats']) - 1}})
             if lic_upd is False:
                 logger.debug('error, could not update snipe_lic collection '
                              'for license {}'
