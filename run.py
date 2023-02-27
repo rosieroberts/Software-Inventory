@@ -2,6 +2,7 @@
 
 import pymongo
 from time import sleep
+import sys
 from diff.arguments import Arguments
 from diff.get_data import getData
 from diff.licenses import Licenses
@@ -17,18 +18,26 @@ def run(args):
 
     arg_assets = []
     arg_licenses = []
+    arg_diff = []
     if args:
         for item in args:
             if item['func_type'] == 'asset':
                 arg_assets.append(item['argument'])
             if item['func_type'] == 'license':
                 arg_licenses.append(item['argument'])
+            if item['func_type'] == 'diff':
+                arg_diff.append(item['argument'])
 
     if len(arg_assets) == 0:
         arg_assets = None
     if len(arg_licenses) == 0:
         arg_licenses = None
         lic_args = None
+
+    if len(arg_diff) != 0:
+        lic_obj = Licenses()
+        lic_obj.get_seat_data(arg_diff)
+        sys.exit()
 
     get_data_obj = getData()
     lic_obj = Licenses()

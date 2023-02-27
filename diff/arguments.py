@@ -54,6 +54,10 @@ class Arguments:
             '-license', '-l',
             nargs='*',
             help='License ID of the license to update, limit 10 licenses.')
+        parser.add_argument(
+            '-diff', '-d',
+            nargs='*',
+            help='License ID to only check license differences without updating')
         inv_args = parser.parse_args()
 
         try:
@@ -135,9 +139,36 @@ class Arguments:
                                        'try again'.format(item))
                         continue
 
+            if inv_args.diff:
+                # as of now licenseIDs are not more than 3 digits,
+                # after a while licenseIDs will probably increase
+                # to 4 digits, if so, change the regex to r'([\d]{1,4})'
+                # and the len to 4 or less
+                license_rgx = compile(r'([\d]{1,3})')
+                for count, item in enumerate(inv_args.license):
+                    if len(item) <= 3:
+                        license = license_rgx.search(item)
+                        if license:
+                            license = str(license.group(0))
+                            if len(item) == len(license):
+                                arg = {'argument': license,
+                                       'func_type': 'diff'}
+                                self.arguments.append(arg)
+                            else:
+                                logger.warning(format_msg.format(item))
+                                continue
+                        else:
+                            logger.warning(format_msg.format(item))
+                            continue
+                    else:
+                        logger.warning('{} license ID has too many digits,'
+                                       'try again'.format(item))
+                        continue
+
             if not inv_args.club and \
                     not inv_args.assetTag and \
-                    not inv_args.hostname and not inv_args.license:
+                    not inv_args.hostname and \
+                    not inv_args.license and not inv_args.diff:
                 return None
             else:
                 if len(self.arguments) == 0:
