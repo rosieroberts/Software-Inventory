@@ -85,9 +85,8 @@ class Seats():
             if status != 'success':
                 message = str(content['messages'])
                 if message == 'Seat not found':
-                    logger.debug('error, asset {} is not currently active, '
-                                 'cannot update license. Asset needs to be '
-                                 'restored in SnipeIT first.'
+                    logger.debug('error, seat id {} does no exist in snipeIT. '
+                                 'run snipe_li_update.py to update db first.'
                                  .format(asset_id))
                 else:
                     logger.debug('error, license {} removal not successful '
@@ -177,9 +176,8 @@ class Seats():
             if status != 'success':
                 message = str(content['messages'])
                 if message == 'Seat not found':
-                    logger.debug('error, asset {} is not currently active, '
-                                 'cannot update license. Asset needs to be '
-                                 'restored in SnipeIT first.'
+                    logger.debug('error, seat id {} does no exist in snipeIT. '
+                                 'run snipe_li_update.py to update db first.'
                                  .format(asset_id))
                 else:
                     logger.debug('error, license {} check-out not successful '

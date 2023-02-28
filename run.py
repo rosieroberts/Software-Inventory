@@ -92,7 +92,7 @@ def run(args):
                 lic_obj.get_lic_seats_update(item)
                 seat_obj.check_out(lic_obj.seats_add)
                 seat_obj.check_in(lic_obj.seats_rem)
-            sys.exit() 
+            sys.exit()
 
     upd_lic_ct = 0
     for license in lic_obj.bigfix_licenses:
