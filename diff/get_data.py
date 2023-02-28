@@ -1,7 +1,6 @@
 from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from datetime import date
 import pymongo
-import sys
 from re import compile
 
 # get today's date
@@ -195,4 +194,3 @@ class getData:
             logger.debug('Assets not found {}'.format(not_found_assets_ct))
         if deleted_assets_ct > 0:
             logger.debug('Assets deleted {}'.format(deleted_assets_ct))
-
