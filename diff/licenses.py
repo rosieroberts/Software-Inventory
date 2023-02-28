@@ -209,12 +209,12 @@ class Licenses:
                  'IP': 1})
             # get computer info from snipe_hw
             asset_info = self.snipe_hw_col.find_one(
-                    {'Hostname': asset['comp_name']},
-                    {'_id': 0,
-                     'ID': 1,
-                     'Location': 1,
-                     'Asset Tag': 1,
-                     'IP': 1})
+                {'Hostname': asset['comp_name']},
+                {'_id': 0,
+                 'ID': 1,
+                 'Location': 1,
+                 'Asset Tag': 1,
+                 'IP': 1})
             if not asset_info:
                 if not comp_info:
                     assets_not_anywhere.append(asset['comp_name'])
@@ -368,7 +368,7 @@ class Licenses:
                                                'License Name': 1,
                                                'License ID': 1,
                                                'Total Seats': 1})
-        seat_amt = int(upd_license['count']) + 100
+        seat_amt = int(upd_license['count'])
         lic_name = upd_license['sw']
         if seat_amt == license['Total Seats']:
             return

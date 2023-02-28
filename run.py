@@ -79,8 +79,15 @@ def run(args):
         lic_obj.get_lic_seats_new(license)
         seat_obj.check_out(lic_obj.seats_add)
 
-    # find licenses that need to be checked-in our checked-out to assets
-    lic_obj.get_licenses_update(lic_obj.lic_arguments)
+    if arg_licenses:
+        # find licenses that need to be checked-in our checked-out to assets
+        lic_obj.get_licenses_update(lic_obj.lic_arguments)
+        if len(lic_obj.lic_arguments) > 0:
+            for item in lic_obj.lic_arguments:
+                lic_obj.get_lic_seats_update(item['sw'])
+                seat_obj.check_out(lic_obj.seats_add)
+                seat_obj.check_in(lic_obj.seats_rem)
+
     upd_lic_ct = 0
     for license in lic_obj.bigfix_licenses:
         # add sleep to prevent API errors
@@ -88,17 +95,11 @@ def run(args):
             sleep(60)
             upd_lic_ct = 0
         # get licenses that had any changes in seat numers
-        if license in lic_obj.upd_licenses:
-            lic_obj.update_license(license)
-            upd_lic_ct += 1
-        # if there were license arguments provided, check for updates for
-        # just those licenses and check in and out
-        if len(lic_obj.lic_arguments) > 0:
-            for item in lic_obj.lic_arguments:
-                lic_obj.get_lic_seats_update(item)
-        else:
-            # for the updated licenses, get seats to check-in or check-out
-            lic_obj.get_lic_seats_update(license)
+        lic_obj.get_licenses_update()
+        lic_obj.update_license(license)
+        upd_lic_ct += 1
+        # for the updated licenses, get seats to check-in or check-out
+        lic_obj.get_lic_seats_update(license)
         seat_obj.check_out(lic_obj.seats_add)
         seat_obj.check_in(lic_obj.seats_rem)
 
