@@ -213,7 +213,8 @@ class Licenses:
                  'ID': 1,
                  'Location': 1,
                  'Asset Tag': 1,
-                 'IP': 1})
+                 'IP': 1,
+                 'Mac Address': 1})
             if not asset_info:
                 if not comp_info:
                     assets_not_anywhere.append(asset['comp_name'])
@@ -247,7 +248,7 @@ class Licenses:
                 self.seats_add.append(seat)
                 logger.debug('Asset: {}, Mac Address {}'
                              .format(seat['asset_name'],
-                                     asset['mac_addr']))
+                                     asset['Mac Address']))
                 asset_count += 1
         snipe_seats = self.snipe_seat_col.find(
             {'license_id': lic_id})
