@@ -35,18 +35,17 @@ def run(args):
         arg_licenses = None
         lic_args = None
 
+    get_data_obj = getData()
+    lic_obj = Licenses()
+
     # displays the differences for one license
     # if provided in args
     if len(arg_diff) != 0:
-        lic_obj = Licenses()
         lic_obj.get_license_lists(arg_diff)
         get_data_obj.get_lic_list(arg_diff)
         lic_args = get_data_obj.arg_licenses
         lic_obj.get_lic_seats_update(lic_args[0])
         sys.exit()
-
-    get_data_obj = getData()
-    lic_obj = Licenses()
 
     # if no arguments provided get a list of all asset info
     if not arg_licenses and not arg_assets:
