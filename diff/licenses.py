@@ -4,7 +4,7 @@ from pprint import pformat
 import pymongo
 import requests
 from update_dbs import config as cfg
-from update_dbs import snipe_lic_update as lic_db_upd
+# from update_dbs import snipe_lic_update as lic_db_upd
 
 # get today's date
 today = date.today()
@@ -72,9 +72,9 @@ class Licenses:
             and adds them to two lists
             if there are license arguments, get only those'''
         # make sure mongodb has the right lic information from snipe
-        upd = lic_db_upd.SnipeSoftware()
-        upd.get_licenses()
-        upd.update_licenses()
+        # upd = lic_db_upd.SnipeSoftware()
+        # upd.get_licenses()
+        # upd.update_licenses()
         # bigfix
         lic_args_list = []
         if args:
