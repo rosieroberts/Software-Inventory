@@ -245,7 +245,9 @@ class Licenses:
             # if seat does not exist, add to upd_seat_add list
             if not snipe_seat:
                 self.seats_add.append(seat)
-                logger.debug(seat['asset_name'])
+                logger.debug('Asset: {}, Mac Address {}'
+                             .format(seat['asset_name'],
+                                     asset['mac_addr']))
                 asset_count += 1
         snipe_seats = self.snipe_seat_col.find(
             {'license_id': lic_id})
@@ -263,11 +265,14 @@ class Licenses:
         for item in snipe_seats:
             # if computer name not in list of computers with this license
             # from bigfix, add to the remove list
+            mac_addr = self.snipe_hw_col.find_one({'Hostname': item['asset_name']})
             if item['asset_name'] is None:
                 continue
             if item['asset_name'] not in comp_names:
                 self.seats_rem.append(item)
-                logger.debug(item['asset_name'])
+                logger.debug('Asset: {}, Mac Address {}'
+                             .format(item['asset_name'],
+                                     mac_addr))
                 asset_ct += 1
         total = self.lic_w_ct_col.find_one({'sw': license_name['sw']},
                                            {'_id': 0, 'count': 1})
