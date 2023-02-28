@@ -44,6 +44,7 @@ class getData:
     snipe_seats = software_db['snipe_seat']
     # deleted assets collection
     deleted = asset_db['deleted']
+    snipe_lic = software_db['snipe_lic']
 
     def __init__(self):
         # assets info from args and if no args, all assets in snipeIT
@@ -111,10 +112,10 @@ class getData:
                     # skip args in the right format but are not found anywhere
                     not_found_assets_ct += 1
                     continue
-        # only found assets and deleted assets associated with a seat will be
-        # returned. This message for review.
-        logger.debug('Asset {}'.format(item['Asset Tag']))
-        logger.debug('Assets found {}'.format(found_assets_ct))
+            # only found assets and deleted assets associated with a seat will be
+            # returned. This message for review.
+            logger.debug('Asset {}'.format(item['Asset Tag']))
+            logger.debug('Assets found {}'.format(found_assets_ct))
         if not_found_assets_ct > 0:
             logger.debug('Assets not found {}'.format(not_found_assets_ct))
         if deleted_assets_ct > 0:
@@ -137,10 +138,14 @@ class getData:
             if not lic:
                 continue
             # license found in db, add to list
-            found_lic = self.snipe_seats.find_one({'license_id': int(item)},
-                                                  {'_id': 0, 'license_name': 1})
+            found_lic = self.snipe_lic.find_one({'License ID': int(item)},
+                                                {'_id': 0, 'License Name': 1})
             if found_lic:
-                self.arg_licenses.append(found_lic['license_name'])
+                self.arg_licenses.append(found_lic['License Name'])
+            else:
+                logger.debug('error, license {} not found in database.'
+                                 .format(item))
+                continue
             # make sure the input matches the license number regex and looks
             # only for license with active assets seats with no assets
             # associated with them will have a None in asset_name in the
@@ -150,7 +155,7 @@ class getData:
                                               'asset_name': {'$ne': None}})
             lic_item = list(lic_item)
             if not lic_item:  # license ID not found in snipe_seats collection
-                logger.debug('error, license {} not found in database.'
+                logger.debug('No seats for license {} found'
                              .format(item))
                 continue
             for seat in lic_item:
@@ -186,10 +191,10 @@ class getData:
                             continue
                     else:
                         continue
-        # only found assets and deleted assets associated with a seat will be
-        # returned. This message is for review.
-        logger.debug('License {}'.format(item))
-        logger.debug('Assets found {}'.format(found_assets_ct))
+            # only found assets and deleted assets associated with a seat will be
+            # returned. This message is for review.
+            logger.debug('License {}'.format(item))
+            logger.debug('Assets found {}'.format(found_assets_ct))
         if not_found_assets_ct > 0:
             logger.debug('Assets not found {}'.format(not_found_assets_ct))
         if deleted_assets_ct > 0:

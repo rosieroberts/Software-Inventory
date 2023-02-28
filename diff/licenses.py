@@ -286,12 +286,14 @@ class Licenses:
                      .format(asset_ct))
         logger.debug('Assets that cannot be found in snipeIT - {}'
                      .format(len(assets_not_found)))
+        logger.debug(pformat(assets_not_found))
         logger.debug('Assets that cannot be found anywhere - {}'
                      .format(len(assets_not_anywhere)))
         logger.debug('Assets not found. Check assets:')
-        logger.debug(pformat(assets_not_found))
-        logger.debug('Asset list for license {}')
-        logger.debug(len(bigfix_assets))
+        logger.debug('Assets associated with license {}'
+                     .format(len(bigfix_assets)))
+        logger.debug('Asset list for license:')
+        logger.debug(pformat([item['comp_name'] for item in bigfix_assets[:10]]))
 
     def get_licenses_delete(self, args=None):
         '''gets licenses that no longer are active in bigfix to remove from
