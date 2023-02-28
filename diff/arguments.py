@@ -146,6 +146,9 @@ class Arguments:
                 # and the len to 4 or less
                 license_rgx = compile(r'([\d]{1,3})')
                 for count, item in enumerate(inv_args.diff):
+                    if count > 1:
+                        logger.warning('error, too many arguments, exiting')
+                        sys.exit()
                     if len(item) <= 3:
                         license = license_rgx.search(item)
                         if license:
@@ -177,6 +180,6 @@ class Arguments:
                     sys.exit()
 
         except(OSError, AttributeError):
-            logger.critical('There was a problem getting all assets, try again',
+            logger.critical('There was a problem, try again',
                             exc_info=True)
             return None

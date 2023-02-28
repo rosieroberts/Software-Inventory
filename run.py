@@ -12,6 +12,7 @@ client = pymongo.MongoClient("mongodb://localhost:27017/")
 software_db = client['software_inventory']
 # Snipe Seats collection
 snipe_seats = software_db['snipe_seat']
+snipe_lic_col = software_db['snipe_lic']
 
 
 def run(args):
@@ -34,10 +35,17 @@ def run(args):
         arg_licenses = None
         lic_args = None
 
+    # displays the differences for one license
+    # if provided in args
     if len(arg_diff) != 0:
         lic_obj = Licenses()
         lic_obj.get_license_lists(arg_diff)
-        lic_obj.get_seat_data(arg_diff)
+        license_id = int(arg_diff)
+        lic = snipe_lic_col.find_one(
+            {'License ID': license_id},
+            {'_id': 0,
+             'License Name': 1})
+        lic_obj.get_lic_seats_update(lic['License Name'])
         sys.exit()
 
     get_data_obj = getData()
