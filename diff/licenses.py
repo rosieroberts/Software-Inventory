@@ -181,12 +181,9 @@ class Licenses:
         '''Gets seat information for licenses with changes since last run'''
         assets_not_found = []
         assets_not_anywhere = []
-        print('**')
-        print(license_name)
         lic_id = self.snipe_lic_col.find_one({'License Name': license_name['sw']},
                                              {'_id': 0,
                                               'License ID': 1})
-        print(lic_id)
         lic_id = lic_id['License ID']
         logger.debug('___________________________________________')
         logger.debug(license_name['sw'].upper())
@@ -250,7 +247,6 @@ class Licenses:
                 self.seats_add.append(seat)
                 logger.debug(seat['asset_name'])
                 asset_count += 1
-                break
         snipe_seats = self.snipe_seat_col.find(
             {'license_id': lic_id})
         snipe_seats = list(snipe_seats)
@@ -329,8 +325,7 @@ class Licenses:
 
     def create_license(self, new_license):
         '''If new licenses found update SnipeIT and databases'''
-        # adding 100 extra seats to prevent future errors
-        seat_amt = int(new_license['count']) + 100
+        seat_amt = int(new_license['count'])
         lic_name = new_license['sw']
         item_dict = str({'name': lic_name,
                          'seats': seat_amt,
@@ -384,7 +379,7 @@ class Licenses:
                                     url=url,
                                     data=payload,
                                     headers=cfg.api_headers)
-        #logger.debug(pformat(response.text))
+        # logger.debug(pformat(response.text))
         content = response.json()
         # logger.debug(pformat(content))
         status = str(content['status'])
@@ -418,7 +413,7 @@ class Licenses:
             response = requests.request("DELETE",
                                         url=url,
                                         headers=cfg.api_headers)
-            #logger.debug(pformat(response.text))
+            # logger.debug(pformat(response.text))
             status_code = response.status_code
             if status_code == 200:
                 content = response.json()
