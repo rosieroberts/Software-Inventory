@@ -71,7 +71,6 @@ class Licenses:
             and adds them to two lists
             if there are license arguments, get only those'''
         # bigfix
-        print(args)
         lic_args_list = []
         if args:
             # only get list of licenses in arguments to update
@@ -152,12 +151,12 @@ class Licenses:
 
     def get_licenses_update(self, args=None):
         '''gets licenses that have different seat amounts to update in snipeIT'''
-        upd_licenses = [item['sw'] for item in self.bigfix_licenses]
+        upd_licenses = [item for item in self.bigfix_licenses]
         if args:
             upd_licenses = []
             for item in args:
                 if item['sw'] in self.bigfix_licenses:
-                    upd_licenses.append(item['sw'])
+                    upd_licenses.append(item)
         for item in upd_licenses:
             license = self.snipe_lic_col.find_one({'License Name': item['sw']},
                                                   {'_id': 0,
@@ -182,15 +181,18 @@ class Licenses:
         '''Gets seat information for licenses with changes since last run'''
         assets_not_found = []
         assets_not_anywhere = []
-        lic_id = self.snipe_lic_col.find_one({'License Name': license_name},
+        print('**')
+        print(license_name)
+        lic_id = self.snipe_lic_col.find_one({'License Name': license_name['sw']},
                                              {'_id': 0,
                                               'License ID': 1})
+        print(lic_id)
         lic_id = lic_id['License ID']
         logger.debug('___________________________________________')
-        logger.debug(license_name.upper())
+        logger.debug(license_name['sw'].upper())
         # get all computers associated with this license
         # from bigfix
-        bigfix_assets = self.licenses_col.find({'sw': license_name},
+        bigfix_assets = self.licenses_col.find({'sw': license_name['sw']},
                                                {'_id': 0,
                                                 'comp_name': 1,
                                                 'sw': 1})
@@ -238,7 +240,7 @@ class Licenses:
                     'location': asset_info['Location'],
                     'asset_name': asset['comp_name'],
                     'asset_tag': asset_info['Asset Tag'],
-                    'license_name': license_name}
+                    'license_name': license_name['sw']}
             # check if the seat already exists in snipeIT
             snipe_seat = self.snipe_seat_col.find_one(
                 {'license_id': seat['license_id'],
@@ -248,6 +250,7 @@ class Licenses:
                 self.seats_add.append(seat)
                 logger.debug(seat['asset_name'])
                 asset_count += 1
+                break
         snipe_seats = self.snipe_seat_col.find(
             {'license_id': lic_id})
         snipe_seats = list(snipe_seats)
@@ -256,7 +259,7 @@ class Licenses:
         asset_ct = 0
         # get computer names from bigfix
         comp_names = self.licenses_col.find(
-            {'sw': license_name},
+            {'sw': license_name['sw']},
             {'_id': 0, 'comp_name': 1})
         comp_names = list(comp_names)
         comp_names = [item['comp_name'] for item in comp_names]
@@ -270,9 +273,9 @@ class Licenses:
                 self.seats_rem.append(item)
                 logger.debug(item['asset_name'])
                 asset_ct += 1
-        total = self.lic_w_ct_col.find_one({'sw': license_name},
+        total = self.lic_w_ct_col.find_one({'sw': license_name['sw']},
                                            {'_id': 0, 'count': 1})
-        free = self.snipe_lic_col.find_one({'License Name': license_name},
+        free = self.snipe_lic_col.find_one({'License Name': license_name['sw']},
                                            {'_id': 0, 'Free Seats': 1})
         logger.debug('Total count of assets for license - {}'
                      .format(total['count']))
@@ -381,7 +384,7 @@ class Licenses:
                                     url=url,
                                     data=payload,
                                     headers=cfg.api_headers)
-        logger.debug(pformat(response.text))
+        #logger.debug(pformat(response.text))
         content = response.json()
         # logger.debug(pformat(content))
         status = str(content['status'])
@@ -415,7 +418,7 @@ class Licenses:
             response = requests.request("DELETE",
                                         url=url,
                                         headers=cfg.api_headers)
-            logger.debug(pformat(response.text))
+            #logger.debug(pformat(response.text))
             status_code = response.status_code
             if status_code == 200:
                 content = response.json()

@@ -13,6 +13,7 @@ software_db = client['software_inventory']
 # Snipe Seats collection
 snipe_seats = software_db['snipe_seat']
 snipe_lic_col = software_db['snipe_lic']
+lic_w_ct_col = software_db['licenses_w_count']
 
 
 def run(args):
@@ -41,10 +42,13 @@ def run(args):
     # displays the differences for one license
     # if provided in args
     if len(arg_diff) != 0:
+        print(arg_diff)
         lic_obj.get_license_lists(arg_diff)
         get_data_obj.get_lic_list(arg_diff)
-        lic_args = get_data_obj.arg_licenses
-        lic_obj.get_lic_seats_update(lic_args[0])
+        for item in get_data_obj.arg_licenses:
+            license_args = lic_w_ct_col.find_one(
+                {'sw': item})
+            lic_obj.get_lic_seats_update(license_args)
         sys.exit()
 
     # if no arguments provided get a list of all asset info
@@ -84,9 +88,11 @@ def run(args):
         lic_obj.get_licenses_update(lic_obj.lic_arguments)
         if len(lic_obj.lic_arguments) > 0:
             for item in lic_obj.lic_arguments:
-                lic_obj.get_lic_seats_update(item['sw'])
+                lic_obj.update_license(item)
+                lic_obj.get_lic_seats_update(item)
                 seat_obj.check_out(lic_obj.seats_add)
                 seat_obj.check_in(lic_obj.seats_rem)
+            sys.exit() 
 
     upd_lic_ct = 0
     for license in lic_obj.bigfix_licenses:
