@@ -36,6 +36,7 @@ def run(args):
 
     if len(arg_diff) != 0:
         lic_obj = Licenses()
+        lic_obj.get_license_lists(arg_diff)
         lic_obj.get_seat_data(arg_diff)
         sys.exit()
 

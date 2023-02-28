@@ -71,16 +71,16 @@ class Licenses:
             and adds them to two lists
             if there are license arguments, get only those'''
         # bigfix
-        if args is not None:
+        print(args)
+        lic_args_list = []
+        if args:
             # only get list of licenses in arguments to update
-            lic_args_list = []
             for lic in args:
                 lic_name = self.lic_w_ct_col.find_one({'sw': lic})
                 lic_args_list.append(lic_name)
-        else:
-            # else update all licenses
-            lic_list = self.lic_w_ct_col.find()
-            lic_list = list(lic_list)
+
+        lic_list = self.lic_w_ct_col.find()
+        lic_list = list(lic_list)
         # snipe
         snipe_lic = self.snipe_lic_col.find()
         snipe_lic = list(snipe_lic)
@@ -180,109 +180,121 @@ class Licenses:
 
     def get_lic_seats_update(self, license_name):
         '''Gets seat information for licenses with changes since last run'''
-        assets_not_found = []
-        logger.debug('___________________________________________')
-        logger.debug(license_name.upper())
-        # get the license ID from snipe
-        license_id = self.snipe_lic_col.find_one({'License Name': license_name},
-                                                 {'_id': 0,
-                                                  'License ID': 1})
-        # get all computers associated with this license
-        # from bigfix
-        bigfix_assets = self.licenses_col.find({'sw': license_name},
-                                               {'_id': 0,
-                                                'comp_name': 1,
-                                                'sw': 1})
-        bigfix_assets = list(bigfix_assets)
-        # for each computer that has this license
-        # check if there is a seat already in snipeIT
-        # if not, a new seat needs to be added
-        asset_count = 0
-        logger.debug('Seats to check out:')
-        for asset in bigfix_assets:
-            # get mac addr from bigfix
-            mac_addr = self.computer_info_col.find_one(
-                {'comp_name': asset['comp_name']},
-                {'_id': 0,
-                 'mac_addr': 1,
-                 'IP': 1})
-            if mac_addr:
+        for lic_id in license_ids:
+            lic_id = int(lic_id)
+            lic = self.snipe_lic_col.find_one({'License ID': lic_id},
+                                              {'_id': 0,
+                                               'License Name': 1})
+            license_name = lic['License Name']
+            assets_not_found = []
+            assets_not_anywhere = []
+            logger.debug('___________________________________________')
+            logger.debug(license_name.upper())
+            # get all computers associated with this license
+            # from bigfix
+            bigfix_assets = self.licenses_col.find({'sw': license_name},
+                                                   {'_id': 0,
+                                                    'comp_name': 1,
+                                                    'sw': 1})
+            bigfix_assets = list(bigfix_assets)
+            # for each computer that has this license
+            # check if there is a seat already in snipeIT
+            # if not, a new seat needs to be added
+            asset_count = 0
+            logger.debug('Seats to check out:')
+            for asset in bigfix_assets:
+                # get mac addr from bigfix
+                comp_info = self.computer_info_col.find_one(
+                    {'comp_name': asset['comp_name']},
+                    {'_id': 0,
+                     'mac_addr': 1,
+                     'IP': 1})
                 # get computer info from snipe_hw
                 asset_info = self.snipe_hw_col.find_one(
-                    {'Hostname': asset['comp_name']},
-                    {'_id': 0,
-                     'ID': 1,
-                     'Location': 1,
-                     'Asset Tag': 1,
-                     'IP': 1})
-            if not asset_info:
-                asset_info = self.snipe_hw_col.find_one(
-                    {'Mac Address': mac_addr['mac_addr']},
-                    {'_id': 0,
-                     'ID': 1,
-                     'Location': 1,
-                     'Asset Tag': 1,
-                     'IP': 1})
+                        {'Hostname': asset['comp_name']},
+                        {'_id': 0,
+                         'ID': 1,
+                         'Location': 1,
+                         'Asset Tag': 1,
+                         'IP': 1})
                 if not asset_info:
-                    assets_not_found.append(asset['comp_name'])
+                    if not comp_info:
+                        assets_not_anywhere.append(asset['comp_name'])
+                        continue
+                    asset_info = self.snipe_hw_col.find_one(
+                        {'Mac Address': comp_info['mac_addr']},
+                        {'_id': 0,
+                         'ID': 1,
+                         'Location': 1,
+                         'Asset Tag': 1,
+                         'IP': 1})
+                if not asset_info:
+                    asset = {'name': asset['comp_name'],
+                             'IP': comp_info['IP'],
+                             'mac_addr': comp_info['mac_addr']}
+                    assets_not_found.append(asset)
                     continue
-                if asset_info['IP'] != mac_addr['IP']:
-                    assets_not_found.append(asset['comp_name'])
+                # seat dictionary with all necessary info for creating seats
+                seat = {'license_id': lic_id,
+                        'assigned_asset': asset_info['ID'],
+                        'location': asset_info['Location'],
+                        'asset_name': asset['comp_name'],
+                        'asset_tag': asset_info['Asset Tag'],
+                        'license_name': license_name}
+                # check if the seat already exists in snipeIT
+                snipe_seat = self.snipe_seat_col.find_one(
+                    {'license_id': seat['license_id'],
+                     'assigned_asset': seat['assigned_asset']})
+                # if seat does not exist, add to upd_seat_add list
+                if not snipe_seat:
+                    self.seats_add.append(seat)
+                    logger.debug(seat['asset_name'])
+                    asset_count += 1
+            snipe_seats = self.snipe_seat_col.find(
+                {'license_id': lic_id})
+            snipe_seats = list(snipe_seats)
+            #  for each seat already in snipe, check if it still
+            # supposed to be checked out, or if it should be removed
+            asset_ct = 0
+            # get computer names from bigfix
+            comp_names = self.licenses_col.find(
+                {'sw': license_name},
+                {'_id': 0, 'comp_name': 1})
+            comp_names = list(comp_names)
+            comp_names = [item['comp_name'] for item in comp_names]
+            logger.debug('Seats to check in:')
+            for item in snipe_seats:
+                # if computer name not in list of computers with this license
+                # from bigfix, add to the remove list
+                if item['asset_name'] is None:
                     continue
-            # seat dictionary with all necessary info for creating seats
-            seat = {'license_id': license_id['License ID'],
-                    'assigned_asset': asset_info['ID'],
-                    'location': asset_info['Location'],
-                    'asset_name': asset['comp_name'],
-                    'asset_tag': asset_info['Asset Tag'],
-                    'license_name': license_name}
-            # check if the seat already exists in snipeIT
-            snipe_seat = self.snipe_seat_col.find_one(
-                {'license_id': seat['license_id'],
-                 'assigned_asset': seat['assigned_asset']})
-            # if seat does not exist, add to upd_seat_add list
-            if not snipe_seat:
-                self.seats_add.append(seat)
-                logger.debug('CHECK OUT', seat['asset_name'])
-                asset_count += 1
-        snipe_seats = self.snipe_seat_col.find(
-            {'license_id': license_id['License ID']})
-        snipe_seats = list(snipe_seats)
-        #  for each seat already in snipe, check if it still
-        # supposed to be checked out, or if it should be removed
-        asset_ct = 0
-        # get computer names from bigfix
-        comp_names = self.licenses_col.find(
-            {'sw': license_name},
-            {'_id': 0, 'comp_name': 1})
-        comp_names = list(comp_names)
-        comp_names = [item['comp_name'] for item in comp_names]
-        logger.debug('Seats to check in:')
-        for item in snipe_seats:
-            # if computer name not in list of computers with this license
-            # from bigfix, add to the remove list
-            if item['asset_name'] is None:
-                continue
-            if item['asset_name'] not in comp_names:
-                self.seats_rem.append(item)
-                logger.debug('CHECK IN', item['asset_name'])
-                asset_ct += 1
-        total = self.lic_w_ct_col.find_one({'sw': license_name},
-                                           {'_id': 0, 'count': 1})
-        free = self.snipe_lic_col.find_one({'License Name': license_name},
-                                           {'_id': 0, 'Free Seats': 1})
-        logger.debug('Total count of assets for license - {}'
-                     .format(total['count']))
-        logger.debug('Total Free Seats for license in SnipeIT - {}'
-                     .format(free['Free Seats']))
-        logger.debug('Assets to check out - {}'
-                     .format(asset_count))
-        logger.debug('Assets to check in - {}'
-                     .format(asset_ct))
-        logger.debug('Assets that cannot be found - {}'
-                     .format(len(assets_not_found)))
-        logger.debug('Assets not found. Check assets:')
-        logger.debug(pformat(assets_not_found))
+                if item['asset_name'] not in comp_names:
+                    self.seats_rem.append(item)
+                    logger.debug(item['asset_name'])
+                    asset_ct += 1
+            total = self.lic_w_ct_col.find_one({'sw': license_name},
+                                               {'_id': 0, 'count': 1})
+            free = self.snipe_lic_col.find_one({'License Name': license_name},
+                                               {'_id': 0, 'Free Seats': 1})
+            logger.debug('Total count of assets for license - {}'
+                         .format(total['count']))
+            logger.debug('Total count of assets that should be checked out - {}'
+                         .format(int(total['count']) - int(len(assets_not_anywhere))))
+            logger.debug('Total Free Seats for license in SnipeIT - {}. '
+                         'This could be outdated. Run snipe_lic_update.py'
+                         .format(free['Free Seats']))
+            logger.debug('Assets to check out - {}'
+                         .format(asset_count))
+            logger.debug('Assets to check in - {}'
+                         .format(asset_ct))
+            logger.debug('Assets that cannot be found in snipeIT - {}'
+                         .format(len(assets_not_found)))
+            logger.debug('Assets that cannot be found anywhere - {}'
+                         .format(len(assets_not_anywhere)))
+            logger.debug('Assets not found. Check assets:')
+            logger.debug(pformat(assets_not_found))
+            logger.debug('Asset list for license {}')
+            logger.debug(len(bigfix_assets))
 
     def get_licenses_delete(self, args=None):
         '''gets licenses that no longer are active in bigfix to remove from
@@ -433,12 +445,14 @@ class Licenses:
                                  .format(license['License ID']))
 
     def get_seat_data(self, license_ids):
-        for id_ in license_ids:
-            lic = self.snipe_lic_col.find_one({'License ID': id_},
+        for lic_id in license_ids:
+            lic_id = int(lic_id)
+            lic = self.snipe_lic_col.find_one({'License ID': lic_id},
                                               {'_id': 0,
                                                'License Name': 1})
             license_name = lic['License Name']
             assets_not_found = []
+            assets_not_anywhere = []
             logger.debug('___________________________________________')
             logger.debug(license_name.upper())
             # get all computers associated with this license
@@ -455,14 +469,13 @@ class Licenses:
             logger.debug('Seats to check out:')
             for asset in bigfix_assets:
                 # get mac addr from bigfix
-                mac_addr = self.computer_info_col.find_one(
+                comp_info = self.computer_info_col.find_one(
                     {'comp_name': asset['comp_name']},
                     {'_id': 0,
                      'mac_addr': 1,
                      'IP': 1})
-                if mac_addr:
-                    # get computer info from snipe_hw
-                    asset_info = self.snipe_hw_col.find_one(
+                # get computer info from snipe_hw
+                asset_info = self.snipe_hw_col.find_one(
                         {'Hostname': asset['comp_name']},
                         {'_id': 0,
                          'ID': 1,
@@ -470,21 +483,24 @@ class Licenses:
                          'Asset Tag': 1,
                          'IP': 1})
                 if not asset_info:
+                    if not comp_info:
+                        assets_not_anywhere.append(asset['comp_name'])
+                        continue
                     asset_info = self.snipe_hw_col.find_one(
-                        {'Mac Address': mac_addr['mac_addr']},
+                        {'Mac Address': comp_info['mac_addr']},
                         {'_id': 0,
                          'ID': 1,
                          'Location': 1,
                          'Asset Tag': 1,
                          'IP': 1})
-                    if not asset_info:
-                        assets_not_found.append(asset['comp_name'])
-                        continue
-                    if asset_info['IP'] != mac_addr['IP']:
-                        assets_not_found.append(asset['comp_name'])
-                        continue
+                if not asset_info:
+                    asset = {'name': asset['comp_name'],
+                             'IP': comp_info['IP'],
+                             'mac_addr': comp_info['mac_addr']}
+                    assets_not_found.append(asset)
+                    continue
                 # seat dictionary with all necessary info for creating seats
-                seat = {'license_id': id_['License ID'],
+                seat = {'license_id': lic_id,
                         'assigned_asset': asset_info['ID'],
                         'location': asset_info['Location'],
                         'asset_name': asset['comp_name'],
@@ -497,10 +513,10 @@ class Licenses:
                 # if seat does not exist, add to upd_seat_add list
                 if not snipe_seat:
                     self.seats_add.append(seat)
-                    logger.debug('CHECK OUT', seat['asset_name'])
+                    logger.debug(seat['asset_name'])
                     asset_count += 1
             snipe_seats = self.snipe_seat_col.find(
-                {'license_id': id_['License ID']})
+                {'license_id': lic_id})
             snipe_seats = list(snipe_seats)
             #  for each seat already in snipe, check if it still
             # supposed to be checked out, or if it should be removed
@@ -519,7 +535,7 @@ class Licenses:
                     continue
                 if item['asset_name'] not in comp_names:
                     self.seats_rem.append(item)
-                    logger.debug('CHECK IN', item['asset_name'])
+                    logger.debug(item['asset_name'])
                     asset_ct += 1
             total = self.lic_w_ct_col.find_one({'sw': license_name},
                                                {'_id': 0, 'count': 1})
@@ -528,22 +544,22 @@ class Licenses:
             logger.debug('Total count of assets for license - {}'
                          .format(total['count']))
             logger.debug('Total count of assets that should be checked out - {}'
-                         .format(int(total['count']) - int(len(assets_not_found))))
+                         .format(int(total['count']) - int(len(assets_not_anywhere))))
             logger.debug('Total Free Seats for license in SnipeIT - {}. '
                          'This could be outdated. Run snipe_lic_update.py'
                          .format(free['Free Seats']))
             logger.debug('Assets to check out - {}'
                          .format(asset_count))
-            logger.debug(self.seats_add)
             logger.debug('Assets to check in - {}'
                          .format(asset_ct))
-            logger.debug(self.seats_rem)
             logger.debug('Assets that cannot be found in snipeIT - {}'
                          .format(len(assets_not_found)))
+            logger.debug('Assets that cannot be found anywhere - {}'
+                         .format(len(assets_not_anywhere)))
             logger.debug('Assets not found. Check assets:')
             logger.debug(pformat(assets_not_found))
             logger.debug('Asset list for license {}')
-            logger.debug(bigfix_assets)
+            logger.debug(len(bigfix_assets))
 
 
 if __name__ == '__main__':
