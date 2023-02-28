@@ -145,7 +145,7 @@ class Arguments:
                 # to 4 digits, if so, change the regex to r'([\d]{1,4})'
                 # and the len to 4 or less
                 license_rgx = compile(r'([\d]{1,3})')
-                for count, item in enumerate(inv_args.license):
+                for count, item in enumerate(inv_args.diff):
                     if len(item) <= 3:
                         license = license_rgx.search(item)
                         if license:
