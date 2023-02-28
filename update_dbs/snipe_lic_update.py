@@ -138,11 +138,22 @@ class SnipeSoftware:
                                                 headers=cfg.api_headers,
                                                 params=querystring)
                     content = response.json()
+                    status_code = response.status_code
                     # sleep if number of requests is 120 to prevent errors
                     count += 1
                     if count == 118:
-                        sleep(61)
+                        sleep(65)
                         count = 0
+                    if status_code != 200:
+                        logger.debug(count)
+                        logger.debug('error, too many requests '
+                                     'trying again')
+                        sleep(65)
+                        response = requests.request("GET",
+                                                    url=url,
+                                                    headers=cfg.api_headers,
+                                                    params=querystring)
+                        content = response.json()
                     for row in content['rows']:
                         if row['assigned_asset'] is None:
                             assigned_asset = None
