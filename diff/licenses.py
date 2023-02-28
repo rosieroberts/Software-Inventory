@@ -185,7 +185,7 @@ class Licenses:
         lic_id = self.snipe_lic_col.find_one({'License Name': license_name},
                                              {'_id': 0,
                                               'License ID': 1})
-        lic_id = int(lic_id['License ID'])
+        lic_id = lic_id['License ID']
         logger.debug('___________________________________________')
         logger.debug(license_name.upper())
         # get all computers associated with this license

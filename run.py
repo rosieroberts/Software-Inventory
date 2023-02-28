@@ -40,12 +40,9 @@ def run(args):
     if len(arg_diff) != 0:
         lic_obj = Licenses()
         lic_obj.get_license_lists(arg_diff)
-        license_id = int(arg_diff)
-        lic = snipe_lic_col.find_one(
-            {'License ID': license_id},
-            {'_id': 0,
-             'License Name': 1})
-        lic_obj.get_lic_seats_update(lic['License Name'])
+        get_data_obj.get_lic_list(arg_diff)
+        lic_args = get_data_obj.arg_licenses
+        lic_obj.get_lic_seats_update(lic_args[0])
         sys.exit()
 
     get_data_obj = getData()
@@ -95,8 +92,14 @@ def run(args):
         if license in lic_obj.upd_licenses:
             lic_obj.update_license(license)
             upd_lic_ct += 1
-        # for the updated licenses, get seats to check-in or check-out
-        lic_obj.get_lic_seats_update(license)
+        # if there were license arguments provided, check for updates for
+        # just those licenses and check in and out
+        if len(lic_obj.lic_arguments) > 0:
+            for item in lic_obj.lic_arguments:
+                lic_obj.get_lic_seats_update(item)
+        else:
+            # for the updated licenses, get seats to check-in or check-out
+            lic_obj.get_lic_seats_update(license)
         seat_obj.check_out(lic_obj.seats_add)
         seat_obj.check_in(lic_obj.seats_rem)
 
