@@ -39,16 +39,17 @@ def run(args):
     get_data_obj = getData()
     lic_obj = Licenses()
 
+    # INFORMATION RETURNED PER LICENSE IF DIFF ARGS
     # displays the differences for one license
     # if provided in args
     if len(arg_diff) != 0:
-        print(arg_diff)
         lic_obj.get_license_lists(arg_diff)
         get_data_obj.get_lic_list(arg_diff)
         for item in get_data_obj.arg_licenses:
             license_args = lic_w_ct_col.find_one(
                 {'sw': item})
-            lic_obj.get_lic_seats_update(license_args)
+            lic_obj.get_lic_seats_add(license_args)
+            lic_obj.get_lic_seats_rem(license_args)
         sys.exit()
 
     # if no arguments provided get a list of all asset info
@@ -65,6 +66,7 @@ def run(args):
     if arg_assets:
         get_data_obj.get_asset_list(arg_assets)
 
+    # NEW LICENSES CREATE
     # get lists of licenses from bigfix and snipe
     # argument passed if license argument is provided
     lic_obj.get_license_lists(lic_args)
@@ -83,17 +85,18 @@ def run(args):
         lic_obj.get_lic_seats_new(license)
         seat_obj.check_out(lic_obj.seats_add)
 
+    # UPDATE WITH LICENSE ARGS
     if arg_licenses:
         # find licenses that need to be checked-in our checked-out to assets
         lic_obj.get_licenses_update(lic_obj.lic_arguments)
         if len(lic_obj.lic_arguments) > 0:
             for item in lic_obj.lic_arguments:
                 lic_obj.update_license(item)
-                lic_obj.get_lic_seats_update(item)
+                lic_obj.get_lic_seats_add(item)
                 seat_obj.check_out(lic_obj.seats_add)
                 seat_obj.check_in(lic_obj.seats_rem)
             sys.exit()
-
+    # UPDATE
     upd_lic_ct = 0
     for license in lic_obj.bigfix_licenses:
         # add sleep to prevent API errors
@@ -105,11 +108,12 @@ def run(args):
         lic_obj.update_license(license)
         upd_lic_ct += 1
         # for the updated licenses, get seats to check-in or check-out
-        lic_obj.get_lic_seats_update(license)
+        lic_obj.get_lic_seats_add(license)
+        lic_obj.get_lic_seats_rem(license)
         seat_obj.check_out(lic_obj.seats_add)
         seat_obj.check_in(lic_obj.seats_rem)
 
-    # find licenses that need to be deleted
+    # DELETE
     lic_obj.get_licenses_delete(lic_obj.lic_arguments)
     del_lic_ct = 0
     for license in lic_obj.del_licenses:
