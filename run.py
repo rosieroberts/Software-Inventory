@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
+from datetime import date
 import pymongo
 from time import sleep
 import sys
@@ -7,6 +9,33 @@ from diff.arguments import Arguments
 from diff.get_data import getData
 from diff.licenses import Licenses
 from diff.seats import Seats
+from update_dbs import config as cfg
+
+
+# get today's date
+today = date.today()
+today_date = today.strftime('%m-%d-%Y')
+
+logger = getLogger('run')
+# TODO: set to ERROR later on after setup
+logger.setLevel(DEBUG)
+
+file_formatter = Formatter('{asctime} {name} {levelname}: {message}', style='{')
+stream_formatter = Formatter('{message}', style='{')
+today = date.today()
+
+# logfile
+file_handler = FileHandler('/opt/Software_Inventory/logs/software_inventory{}.log'
+                           .format(today.strftime('%m%d%Y')))
+file_handler.setLevel(DEBUG)
+file_handler.setFormatter(file_formatter)
+
+# console
+stream_handler = StreamHandler()
+stream_handler.setFormatter(stream_formatter)
+
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
 
 client = pymongo.MongoClient("mongodb://localhost:27017/")
 software_db = client['software_inventory']
@@ -38,6 +67,16 @@ def run(args):
 
     get_data_obj = getData()
     lic_obj = Licenses()
+    seat_obj = Seats()
+
+    # if no arguments provided get a list of all asset info
+    if not arg_licenses and not arg_assets:
+        get_data_obj.get_all_assets()
+
+
+    # get lists of dicts of asset info from asset arguments
+    if arg_assets:
+        get_data_obj.get_asset_list(arg_assets)
 
     # INFORMATION RETURNED PER LICENSE IF DIFF ARGS
     # displays the differences for one license
@@ -48,23 +87,31 @@ def run(args):
         for item in get_data_obj.arg_licenses:
             license_args = lic_w_ct_col.find_one(
                 {'sw': item})
-            lic_obj.get_lic_seats_add(license_args)
             lic_obj.get_lic_seats_rem(license_args)
+            lic_obj.get_lic_seats_add(license_args)
         sys.exit()
 
-    # if no arguments provided get a list of all asset info
-    if not arg_licenses and not arg_assets:
-        get_data_obj.get_all_assets()
-
-    # if license arguments provided, get list of assets
-    # associated with those licenses
+    # UPDATE WITH LICENSE ARGS
     if arg_licenses:
         get_data_obj.get_lic_list(arg_licenses)
-        lic_args = get_data_obj.arg_licenses
-
-    # get lists of dicts of asset info from asset arguments
-    if arg_assets:
-        get_data_obj.get_asset_list(arg_assets)
+        print('----',get_data_obj.arg_licenses)
+        lic_obj.get_license_lists(get_data_obj.arg_licenses)
+        # find licenses that need to be checked-in our checked-out to assets
+        lic_obj.get_licenses_update(lic_obj.lic_arguments)
+        if len(lic_obj.upd_licenses) > 0:
+            for upd_lic in lic_obj.upd_licenses:
+                # updating licenses with the right numbers
+                lic_obj.update_license(upd_lic)
+                print('SENDING LIC UPD REQUESTS')
+        if len(lic_obj.lic_arguments) > 0:
+            for license in lic_obj.lic_arguments:
+                logger.debug('\n\n---------------------{}----------------------'
+                     .format(license['sw']))
+                lic_obj.get_lic_seats_rem(license)
+                seat_obj.check_in(lic_obj.seats_rem)
+                lic_obj.get_lic_seats_add(license)
+                seat_obj.check_out(lic_obj.seats_add)
+        sys.exit()
 
     # NEW LICENSES CREATE
     # get lists of licenses from bigfix and snipe
@@ -72,7 +119,6 @@ def run(args):
     lic_obj.get_license_lists(lic_args)
     # find new licenses
     lic_obj.get_licenses_new(lic_obj.lic_arguments)
-    seat_obj = Seats()
     new_lic_ct = 0
     for license in lic_obj.new_licenses:
         # push changes to SnipeIT API and update MongoDB
@@ -85,33 +131,31 @@ def run(args):
         lic_obj.get_lic_seats_new(license)
         seat_obj.check_out(lic_obj.seats_add)
 
-    # UPDATE WITH LICENSE ARGS
-    if arg_licenses:
-        # find licenses that need to be checked-in our checked-out to assets
-        lic_obj.get_licenses_update(lic_obj.lic_arguments)
-        lic_obj.update_license(item)
-        if len(lic_obj.lic_arguments) > 0:
-            for item in lic_obj.lic_arguments:
-                lic_obj.get_lic_seats_add(item)
-                lic_obj.get_lic_seats_rem(item)
-                seat_obj.check_in(lic_obj.seats_rem)
-                seat_obj.check_out(lic_obj.seats_add)
-            sys.exit()
     # UPDATE
     upd_lic_ct = 0
+    # get licenses that had any changes in seat numers
     lic_obj.get_licenses_update()
-    for license in lic_obj.bigfix_licenses:
+    print('lic_obj.upd_licenses', len(lic_obj.upd_licenses))
+    for upd_lic in lic_obj.upd_licenses:
         # add sleep to prevent API errors
         if upd_lic_ct == 118:
             sleep(60)
             upd_lic_ct = 0
-        # get licenses that had any changes in seat numers
+        # updating licenses with the right numbers
+        lic_obj.update_license(upd_lic)
         upd_lic_ct += 1
-        # for the updated licenses, get seats to check-in or check-out
-        lic_obj.update_license(license)
-        lic_obj.get_lic_seats_add(license)
+    for license in lic_obj.bigfix_licenses:
+        logger.debug('\n\n---------------------{}----------------------'
+                     .format(license['sw']))
         lic_obj.get_lic_seats_rem(license)
+        print('!!!!!!!!!')
+        print('METHOD lic_obj.get_lic_seats_rem(license)')
+        print('lic_obj.seats_rem', len(lic_obj.seats_rem))
         seat_obj.check_in(lic_obj.seats_rem)
+        lic_obj.get_lic_seats_add(license)
+        print('!!!!!!!!!')
+        print('METHOD lic_obj.get_lic_seats_add(license)')
+        print('lic_obj.seats_add', len(lic_obj.seats_add))
         seat_obj.check_out(lic_obj.seats_add)
 
     # DELETE

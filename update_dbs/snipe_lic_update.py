@@ -7,7 +7,8 @@ from json import decoder
 from datetime import date, datetime
 from re import compile
 from time import sleep
-import config as cfg
+from update_dbs import config as cfg
+#import config as cfg
 
 # Logger setup
 logger = getLogger('update_snipe_licenses')
@@ -128,7 +129,7 @@ class SnipeSoftware:
         except(pymongo.errors.PyMongoError):
             logger.exception('error adding snipe license information to mongoDB')
 
-    def get_seats(self, args):
+    def get_seats(self, args=None):
         # get license seat information (it is slow due to API pagination)
         try:
             count = 0
@@ -336,9 +337,10 @@ class Args():
             '-license', '-l',
             nargs='*',
             help='License ID of the license to update snipeIT DB.')
+        args = parser.parse_args()
         try:
             format_msg = '{} is not in the right format, try again'
-            if Args.args.license:
+            if args.license:
                 # as of now licenseIDs are not more than 3 digits,
                 # after a while licenseIDs will probably increase
                 # to 4 digits, if so, change the regex to r'([\d]{1,4})'

@@ -3,8 +3,8 @@ from datetime import date
 from pprint import pformat
 import pymongo
 import requests
-from update_dbs import config as cfg
-# from update_dbs import snipe_lic_update as lic_db_upd
+import update_dbs.snipe_lic_update
+import update_dbs.config as cfg
 
 # get today's date
 today = date.today()
@@ -51,8 +51,8 @@ class Licenses:
 
     def __init__(self):
         # current licenses to compare
-        self.bigfix_licenses = tuple
-        self.snipe_licenses = tuple
+        self.bigfix_licenses = ()
+        self.snipe_licenses = ()
         self.lic_arguments = ()
         # new licenses from get_licenses_new.
         # New seats found go to seats_add
@@ -72,9 +72,9 @@ class Licenses:
             and adds them to two lists
             if there are license arguments, get only those'''
         # make sure mongodb has the right lic information from snipe
-        # upd = lic_db_upd.SnipeSoftware()
-        # upd.get_licenses()
-        # upd.update_licenses()
+        upd = lic_db_upd.SnipeSoftware()
+        upd.get_licenses()
+        upd.update_licenses()
         # bigfix
         lic_args_list = []
         if args:
@@ -175,11 +175,11 @@ class Licenses:
                 continue
             else:
                 # if the seat amount is not right, update
-                logger.debug('Found changes for license {}.\n'
-                             'Updating seat amount from {} to {}'
-                             .format(item['sw'],
-                                     license['Total Seats'],
-                                     item['count']))
+                #logger.debug('Found changes for license {}.\n'
+                 #            'Updating seat amount from {} to {}'
+                  #           .format(item['sw'],
+                   #                  license['Total Seats'],
+                    #                 item['count']))
                 self.upd_licenses.append(item)
 
     def get_lic_seats_add(self, license_name):
@@ -190,8 +190,8 @@ class Licenses:
                                              {'_id': 0,
                                               'License ID': 1})
         lic_id = lic_id['License ID']
-        logger.debug('____________________CHECK-OUT_______________________')
-        logger.debug(license_name['sw'].upper())
+        logger.debug('_____________________LICENSE ID {} CHECK-OUT______________________'
+                     .format(lic_id))
         # get all computers associated with this license
         # from bigfix
         bigfix_assets = self.licenses_col.find({'sw': license_name['sw']},
@@ -336,12 +336,12 @@ class Licenses:
 
     def get_lic_seats_rem(self, license_name):
         '''Gets seats that need to be checked-in'''
-        logger.debug('____________________CHECK-IN_______________________')
-        logger.debug(license_name['sw'].upper())
         lic_id = self.snipe_lic_col.find_one({'License Name': license_name['sw']},
                                              {'_id': 0,
                                               'License ID': 1})
         lic_id = lic_id['License ID']
+        logger.debug('_____________________LICENSE ID {} CHECK-IN_______________________'
+                     .format(lic_id))
         # only get seats that have an assigned asset ID
         snipe_seats = self.snipe_seat_col.find(
             {'license_id': lic_id,
@@ -460,6 +460,7 @@ class Licenses:
     def update_license(self, upd_license):
         '''If existing licenses have wrong amount of license seats update
         SnipeIT and databases'''
+        print(upd_license)
         license = self.snipe_lic_col.find_one({'License Name': upd_license['sw']},
                                               {'_id': 0,
                                                'License Name': 1,
@@ -490,10 +491,12 @@ class Licenses:
                 logger.debug('error, Could not update License {} '
                              'with {} seats to MongoDB'
                              .format(lic_name, seat_amt))
+                logger.debug(pformat(response.text))
         else:
             logger.debug('Could not update license {} '
                          'with the right seat amount in SnipeIT'
                          .format(upd_license['sw']))
+            logger.debug(pformat(response.text))
 
     def delete_license(self, del_license):
         ''' delete removed licenses from snipeIT and databases'''
