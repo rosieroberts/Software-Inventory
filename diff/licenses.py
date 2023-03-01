@@ -53,7 +53,7 @@ class Licenses:
         # current licenses to compare
         self.bigfix_licenses = tuple
         self.snipe_licenses = tuple
-        self.lic_arguments = tuple
+        self.lic_arguments = ()
         # new licenses from get_licenses_new.
         # New seats found go to seats_add
         self.new_licenses = []
@@ -212,11 +212,47 @@ class Licenses:
                     'license_name': license_name['sw']}
             # check if the seat already exists in snipeIT
             snipe_seat = self.snipe_seat_col.find_one(
-                {'license_id': seat['license_id'],
-                 'asset_name': seat['asset_name']})
+                {'license_id': lic_id,
+                 'asset_name': asset['comp_name']})
             # if a seat is already checked out, move on to the nex asset
             if snipe_seat:
                 continue
+            # some of the seats have different hostnames,
+            # in bigfix I think it is right, snipeIT has hostnames
+            # that are old I believe.
+            # find the mac address from the computer_info_col (bigfix)
+            comp_info = self.computer_info_col.find_one(
+                {'comp_name': asset['comp_name']},
+                {'_id': 0,
+                 'mac_addr': 1,
+                 'IP': 1})
+            if comp_info:
+                snipe_asset = self.snipe_hw_col.find_one(
+                    {'Mac Address': comp_info['mac_addr']},
+                    {'_id': 0,
+                     'ID': 1,
+                     'Location': 1,
+                     'Asset Tag': 1,
+                     'IP': 1})
+                if not snipe_asset:
+                    asset = {'name': asset['comp_name'],
+                             'IP': comp_info['IP'],
+                             'mac_addr': comp_info['mac_addr']}
+                    assets_not_found.append(asset)
+                    continue
+                # try to find the seat again with the mac address
+                snipe_seat = self.snipe_seat_col.find_one(
+                    {'license_id': lic_id,
+                     'assigned_asset': snipe_asset['ID']})
+                if snipe_seat:
+                    continue
+            else:
+                # assets not found in SnipeIT with a hostname,
+                # and cannot get a mac_address from bigfix to look it up that
+                # way, so it is assets not found anywhere
+                assets_not_anywhere.append(asset['comp_name'])
+                continue
+            # IF SEAT IS NOT FOUND, CREATE SEAT
             # if there is no seat checked out, get all info
             # necessary to create a seat
             # get computer info from snipe_hw
@@ -248,8 +284,9 @@ class Licenses:
                          'ID': 1,
                          'Location': 1,
                          'Asset Tag': 1,
-                         'IP': 1})
+                         'Hostname': 1})
                     if asset_info:
+                        seat['asset_name'] = asset_info['Hostname']
                         seat['location'] = asset_info['Location']
                         seat['asset_tag'] = asset_info['Asset Tag']
                         seat['assigned_asset'] = asset_info['ID']
@@ -260,12 +297,6 @@ class Licenses:
                                  'mac_addr': comp_info['mac_addr']}
                         assets_not_found.append(asset)
                         continue
-                # assets not found in SnipeIT with a hostname,
-                # and cannot get a mac_address from bigfix to look it up that
-                # way, so it is assets not found anywhere
-                else:
-                    assets_not_anywhere.append(asset['comp_name'])
-                    continue
             # add new seat to upd_seat_add list
             if not snipe_seat:
                 self.seats_add.append(seat)
@@ -326,27 +357,26 @@ class Licenses:
              'comp_name': 1})
         comp_names = list(comp_names)
         comp_names = [item['comp_name'] for item in comp_names]
-        bigfix_macs = []
-        for computer in comp_names:
-            # get mac_addresses from bigfix
-            mac_addr_bigfix = self.computer_info_col.find_one(
-                {'comp_name': computer},
-                {'_id': 0,
-                 'mac_addr': 1})
-            if mac_addr_bigfix:
-                bigfix_macs.append(mac_addr_bigfix['mac_addr'])
+        
+        bigfix_macs = self.computer_info_col.find({})
+        bigfix_macs = list(bigfix_macs)
+        bigfix_macs = [item['mac_addr'] for item in bigfix_macs]
+
         for seat in snipe_seats:
-            mac_addr_snipe = self.snipe_hw_col.find_one(
-                {'ID': seat['assigned_asset']},
-                {'_id': 0, 'Mac Address': 1})
-            # if mac_addr not in list of mac_addresses with this license
-            # from bigfix, add to the remove list
-            if mac_addr_snipe['Mac Address'] not in bigfix_macs:
-                self.seats_rem.append(seat)
-                logger.debug('check-in asset: {}, asset ID {}'
-                             .format(seat['asset_name'],
-                                     seat['assigned_asset']))
-                asset_ct += 1
+            if seat['asset_name'] not in comp_names:
+                mac_addr_snipe = self.snipe_hw_col.find_one(
+                    {'ID': seat['assigned_asset']},
+                    {'_id': 0, 'Mac Address': 1})
+                if not mac_addr_snipe:
+                    continue
+                # if mac_addr not in list of mac_addresses with this license
+                # from bigfix, add to the remove list
+                if mac_addr_snipe['Mac Address'] not in bigfix_macs:
+                    self.seats_rem.append(seat)
+                    logger.debug('check-in asset: {}, asset ID {}'
+                                 .format(seat['asset_name'],
+                                         seat['assigned_asset']))
+                    asset_ct += 1
 
         total = self.lic_w_ct_col.find_one({'sw': license_name['sw']},
                                            {'_id': 0, 'count': 1})
