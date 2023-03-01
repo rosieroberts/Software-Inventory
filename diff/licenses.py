@@ -333,7 +333,8 @@ class Licenses:
                 {'comp_name': computer},
                 {'_id': 0,
                  'mac_addr': 1})
-            bigfix_macs.append(mac_addr_bigfix['mac_addr'])
+            if mac_addr_bigfix:
+                bigfix_macs.append(mac_addr_bigfix['mac_addr'])
         for seat in snipe_seats:
             mac_addr_snipe = self.snipe_hw_col.find_one(
                 {'ID': seat['assigned_asset']},
