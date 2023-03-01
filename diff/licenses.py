@@ -3,7 +3,7 @@ from datetime import date
 from pprint import pformat
 import pymongo
 import requests
-import update_dbs.snipe_lic_update
+import update_dbs.snipe_lic_update as lic_db_upd
 import update_dbs.config as cfg
 
 # get today's date
