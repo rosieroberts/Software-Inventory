@@ -203,7 +203,6 @@ class Licenses:
         # check if there is a seat already in snipeIT
         # if not, a new seat needs to be added
         asset_count = 0
-        logger.debug('Seats to check out:')
         for asset in bigfix_assets:
             seat = {'license_id': lic_id,
                     'assigned_asset': None,
@@ -286,9 +285,6 @@ class Licenses:
         logger.debug('Total Free Seats for license in SnipeIT - {}. '
                      'This could be outdated. Run snipe_lic_update.py'
                      .format(free['Free Seats']))
-        logger.debug('Assets that cannot be found in snipeIT - {}'
-                     .format(len(assets_not_found)))
-        logger.debug(pformat(assets_not_found))
         logger.debug('Assets that cannot be found anywhere - {}'
                      .format(len(assets_not_anywhere)))
         logger.debug('Assets associated with license {}'
@@ -299,9 +295,13 @@ class Licenses:
         snipe_assets = list(snipe_assets)
         snipe_assets = [asset['asset_name'] for asset in snipe_assets]
         # for debugging
-        logger.debug('Assets not found in snipeIT:')
-        logger.debug(pformat([item['comp_name'] for item in bigfix_assets
-                              if item['comp_name'] not in snipe_assets]))
+        # logger.debug('Assets not found in snipeIT (it checks hostnames only):')
+        # logger.debug(pformat([item['comp_name'] for item in bigfix_assets
+        #                      if item['comp_name'] not in snipe_assets]))
+        logger.debug('Assets not found in snipeIT (checks mac_addresses '
+                     'and hostnames) - {}'
+                     .format(len(assets_not_found)))
+        logger.debug(pformat([asset['name'] for asset in assets_not_found]))
 
     def get_lic_seats_rem(self, license_name):
         '''Gets seats that need to be checked-in'''
@@ -322,19 +322,29 @@ class Licenses:
         # get computer names from bigfix
         comp_names = self.licenses_col.find(
             {'sw': license_name['sw']},
-            {'_id': 0, 'comp_name': 1})
+            {'_id': 0,
+             'comp_name': 1})
         comp_names = list(comp_names)
         comp_names = [item['comp_name'] for item in comp_names]
-        logger.debug('Seats to check in:')
-
-        for item in snipe_seats:
-            # if computer name not in list of computers with this license
+        bigfix_macs = []
+        for computer in comp_names:
+            # get mac_addresses from bigfix
+            mac_addr_bigfix = self.computer_info_col.find_one(
+                {'comp_name': computer},
+                {'_id': 0,
+                 'mac_addr': 1})
+            bigfix_macs.append(mac_addr_bigfix['mac_addr'])
+        for seat in snipe_seats:
+            mac_addr_snipe = self.snipe_hw_col.find_one(
+                {'ID': seat['assigned_asset']},
+                {'_id': 0, 'Mac Address': 1})
+            # if mac_addr not in list of mac_addresses with this license
             # from bigfix, add to the remove list
-            if item['asset_name'] not in comp_names:
-                self.seats_rem.append(item)
+            if mac_addr_snipe['Mac Address'] not in bigfix_macs:
+                self.seats_rem.append(seat)
                 logger.debug('check-in asset: {}, asset ID {}'
-                             .format(item['asset_name'],
-                                     item['assigned_asset']))
+                             .format(seat['asset_name'],
+                                     seat['assigned_asset']))
                 asset_ct += 1
 
         total = self.lic_w_ct_col.find_one({'sw': license_name['sw']},
@@ -343,7 +353,7 @@ class Licenses:
                                            {'_id': 0, 'Free Seats': 1})
         logger.debug('Total count of assets for license - {}'
                      .format(total['count']))
-        logger.debug('Total Free Seats for license in SnipeIT - {}. '
+        logger.debug('Total Free Seats for license in SnipeIT - {}.\n'
                      'This could be outdated. Run snipe_lic_update.py'
                      .format(free['Free Seats']))
         logger.debug('Assets to check in - {}'
