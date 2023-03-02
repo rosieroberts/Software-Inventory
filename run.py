@@ -83,6 +83,7 @@ def run(args):
     # if provided in args
     if len(arg_diff) != 0:
         lic_obj.get_license_lists(arg_diff)
+        lic_obj.seat_duplicates()
         get_data_obj.get_lic_list(arg_diff)
         for item in get_data_obj.arg_licenses:
             license_args = lic_w_ct_col.find_one(
@@ -94,15 +95,16 @@ def run(args):
     # UPDATE WITH LICENSE ARGS
     if arg_licenses:
         get_data_obj.get_lic_list(arg_licenses)
-        print('----',get_data_obj.arg_licenses)
         lic_obj.get_license_lists(get_data_obj.arg_licenses)
+        lic_obj.seat_duplicates()
+        seat_obj.check_in(lic_obj.seat_dups)
         # find licenses that need to be checked-in our checked-out to assets
         lic_obj.get_licenses_update(lic_obj.lic_arguments)
+        lic_obj.get_licenses_delete(lic_obj.lic_arguments)
         if len(lic_obj.upd_licenses) > 0:
             for upd_lic in lic_obj.upd_licenses:
                 # updating licenses with the right numbers
                 lic_obj.update_license(upd_lic)
-                print('SENDING LIC UPD REQUESTS')
         if len(lic_obj.lic_arguments) > 0:
             for license in lic_obj.lic_arguments:
                 logger.debug('\n\n---------------------{}----------------------'
@@ -111,6 +113,12 @@ def run(args):
                 seat_obj.check_in(lic_obj.seats_rem)
                 lic_obj.get_lic_seats_add(license)
                 seat_obj.check_out(lic_obj.seats_add)
+
+                lic_obj.get_lic_seats_del(license)
+                if license in lic_obj.del_licenses:
+                    lic_obj.get_lic_seats_del(del_lic)
+                    seat_obj.check_in(lic_obj.seats_rem)
+                    # lic_obj.delete_license(license)
         sys.exit()
 
     # NEW LICENSES CREATE
@@ -133,9 +141,11 @@ def run(args):
 
     # UPDATE
     upd_lic_ct = 0
+    lic_obj.seat_duplicates()
+    seat_obj.check_in(lic_obj.seat_dups)
+    lic_obj.get_license_lists()
     # get licenses that had any changes in seat numers
     lic_obj.get_licenses_update()
-    print('lic_obj.upd_licenses', len(lic_obj.upd_licenses))
     for upd_lic in lic_obj.upd_licenses:
         # add sleep to prevent API errors
         if upd_lic_ct == 118:
@@ -148,14 +158,8 @@ def run(args):
         logger.debug('\n\n---------------------{}----------------------'
                      .format(license['sw']))
         lic_obj.get_lic_seats_rem(license)
-        print('!!!!!!!!!')
-        print('METHOD lic_obj.get_lic_seats_rem(license)')
-        print('lic_obj.seats_rem', len(lic_obj.seats_rem))
         seat_obj.check_in(lic_obj.seats_rem)
         lic_obj.get_lic_seats_add(license)
-        print('!!!!!!!!!')
-        print('METHOD lic_obj.get_lic_seats_add(license)')
-        print('lic_obj.seats_add', len(lic_obj.seats_add))
         seat_obj.check_out(lic_obj.seats_add)
 
     # DELETE
@@ -164,7 +168,6 @@ def run(args):
     for license in lic_obj.del_licenses:
         lic_obj.get_lic_seats_del(license)
         seat_obj.check_in(lic_obj.seats_rem)
-        print(lic_obj.del_license)
         if del_lic_ct == 118:
             sleep(60)
             del_lic_ct = 0

@@ -1,6 +1,6 @@
 from logging import FileHandler, Formatter, StreamHandler, getLogger, DEBUG
 from datetime import date
-from pprint import pformat
+from pprint import pformat, pprint
 import pymongo
 import requests
 import update_dbs.snipe_lic_update as lic_db_upd
@@ -75,8 +75,9 @@ class Licenses:
             if there are license arguments, get only those'''
         # make sure mongodb has the right lic information from snipe
         upd = lic_db_upd.SnipeSoftware()
-        upd.get_licenses()
-        upd.update_licenses()
+        if upd.get_software_count() != 0:
+            upd.get_licenses()
+            upd.update_licenses()
         # bigfix
         lic_args_list = []
         if args:
@@ -359,25 +360,32 @@ class Licenses:
              'comp_name': 1})
         comp_names = list(comp_names)
         comp_names = [item['comp_name'] for item in comp_names]
-        bigfix_macs = self.computer_info_col.find({})
-        bigfix_macs = list(bigfix_macs)
-        bigfix_macs = [item['mac_addr'] for item in bigfix_macs]
-
         for seat in snipe_seats:
             if seat['asset_name'] not in comp_names:
                 mac_addr_snipe = self.snipe_hw_col.find_one(
                     {'ID': seat['assigned_asset']},
                     {'_id': 0, 'Mac Address': 1})
-                if not mac_addr_snipe:
-                    continue
-                # if mac_addr not in list of mac_addresses with this license
-                # from bigfix, add to the remove list
-                if mac_addr_snipe['Mac Address'] not in bigfix_macs:
-                    self.seats_rem.append(seat)
-                    logger.debug('check-in asset: {}, asset ID {}'
-                                 .format(seat['asset_name'],
-                                         seat['assigned_asset']))
-                    asset_ct += 1
+                if mac_addr_snipe:
+                    # the asset names may be different, get the asset name
+                    # from bigfix and then see if that asset name is in
+                    # the list of computers associated with this license
+                    # if not found, remove
+                    computer_info_name = self.computer_info_col.find_one(
+                        {'mac_addr': mac_addr_snipe['Mac Address']},
+                        {'_id': 0, 'comp_name': 1})
+                    if computer_info_name:
+                        if computer_info_name['comp_name'] not in comp_names:
+                            self.seats_rem.append(seat)
+                            logger.debug('check-in asset: {}, asset ID {}'
+                                         .format(seat['asset_name'],
+                                                 seat['assigned_asset']))
+                            asset_ct += 1
+                    else:
+                        self.seats_rem.append(seat)
+                        logger.debug('check-in asset: {}, asset ID {}'
+                                     .format(seat['asset_name'],
+                                             seat['assigned_asset']))
+                        asset_ct += 1                    
 
         total = self.lic_w_ct_col.find_one({'sw': license_name['sw']},
                                            {'_id': 0, 'count': 1})
@@ -461,7 +469,6 @@ class Licenses:
     def update_license(self, upd_license):
         '''If existing licenses have wrong amount of license seats update
         SnipeIT and databases'''
-        print(upd_license)
         license = self.snipe_lic_col.find_one({'License Name': upd_license['sw']},
                                               {'_id': 0,
                                                'License Name': 1,
@@ -569,10 +576,8 @@ class Licenses:
                 {'license_id': seat['_id']['license_id'],
                  'asset_name': seat['_id']['asset_name'],
                  'asset_tag': seat['_id']['asset_tag']})
-            self.seat_dups = list(duplicate_seats)
-            for seat_dups in self.seat_dups:
-                print(seat_dups)
-
+            for dups in duplicate_seats:
+                self.seat_dups.append(dups)
 
 if __name__ == '__main__':
     try:

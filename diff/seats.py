@@ -124,7 +124,9 @@ class Seats():
         if len(seats) == 0:
             print('NO SEATS TO CHECK OUT')
         ct = 0
+        print(seats)
         for seat in seats:
+            print(seat)
             # get asset information
             asset_info = self.snipe_hw_col.find_one(
                 {'ID': seat['assigned_asset']})
@@ -139,8 +141,8 @@ class Seats():
                  '_id': 0})
             if not empty_seat:
                 logger.debug('error, there are no empty seats left. '
-                             'check license {}'
-                             .format(seat['license_id']))
+                             'cannot check out {} seats. Check license {}'
+                             .format(len(seats), seat['license_id']))
                 return
             license_id = seat['license_id']
             seat_id = empty_seat['id']
@@ -176,8 +178,8 @@ class Seats():
             if status != 'success':
                 message = str(content['messages'])
                 if message == 'Seat not found':
-                    logger.debug('error, seat id {} does no exist in snipeIT. '
-                                 'run snipe_li_update.py to update db first.'
+                    logger.debug('error, seat id {} does not exist in snipeIT. '
+                                 'run snipe_lic_update.py to update db first.'
                                  .format(asset_id))
                 else:
                     logger.debug('error, license {} check-out not successful '
