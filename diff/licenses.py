@@ -62,6 +62,8 @@ class Licenses:
         # licenses that need to be updated. Update seats go to
         # seats_add and seats_rem
         self.upd_licenses = []
+        # duplicate seats to check-in
+        self.seat_dups = []
         # check-in and check-out seats
         self.seats_add = []
         self.seats_rem = []
@@ -175,11 +177,11 @@ class Licenses:
                 continue
             else:
                 # if the seat amount is not right, update
-                #logger.debug('Found changes for license {}.\n'
-                 #            'Updating seat amount from {} to {}'
-                  #           .format(item['sw'],
-                   #                  license['Total Seats'],
-                    #                 item['count']))
+                # logger.debug('Found changes for license {}.\n'
+                #              'Updating seat amount from {} to {}'
+                #              .format(item['sw'],
+                #                      license['Total Seats'],
+                #                      item['count']))
                 self.upd_licenses.append(item)
 
     def get_lic_seats_add(self, license_name):
@@ -357,7 +359,6 @@ class Licenses:
              'comp_name': 1})
         comp_names = list(comp_names)
         comp_names = [item['comp_name'] for item in comp_names]
-        
         bigfix_macs = self.computer_info_col.find({})
         bigfix_macs = list(bigfix_macs)
         bigfix_macs = [item['mac_addr'] for item in bigfix_macs]
@@ -541,6 +542,36 @@ class Licenses:
                     logger.debug('Could not delete license {} '
                                  'from SnipeIT'
                                  .format(license['License ID']))
+
+    def seat_duplicates(self):
+        # find seat that are duplicated in snipeIT
+        pipeline = [{'$match': {'license_id': {'$ne': None},
+                                'asset_name': {'$ne': None},
+                                'asset_tag': {'$ne': None}}},
+                    {'$group': {'_id': {'license_id': '$license_id',
+                                        'asset_name': '$asset_name',
+                                        'asset_tag': '$asset_tag'},
+                                'count': {'$sum': 1}}},
+                    {'$match': {'count': {'$gt': 1}}},
+                    {'$sort': {'_id.license_id': pymongo.ASCENDING,
+                               '_id.asset_name': pymongo.ASCENDING,
+                               '_id.asset_tag': pymongo.ASCENDING}}]
+
+        # execute the pipeline and print the results
+        duplicates = self.snipe_seat_col.aggregate(pipeline)
+        for seat in duplicates:
+            print('Seats with license_id={}, asset_name={}, and asset_tag={}'
+                  .format(seat['_id']['license_id'],
+                          seat['_id']['asset_name'],
+                          seat['_id']['asset_tag']))
+            # do something with the seatuments, e.g. print them:
+            duplicate_seats = self.snipe_seat_col.find(
+                {'license_id': seat['_id']['license_id'],
+                 'asset_name': seat['_id']['asset_name'],
+                 'asset_tag': seat['_id']['asset_tag']})
+            self.seat_dups = list(duplicate_seats)
+            for seat_dups in self.seat_dups:
+                print(seat_dups)
 
 
 if __name__ == '__main__':
