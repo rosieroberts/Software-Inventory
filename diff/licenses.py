@@ -248,7 +248,7 @@ class Licenses:
                         # different hostname for that same asset
                         snipe_seat = self.snipe_seat_col.find_one(
                             {'license_id': lic_id,
-                             'asset_name': asset['comp_name']})
+                             'asset_name': snipe_asset_name['Hostname']})
                         if snipe_seat:
                             continue
                         else:
