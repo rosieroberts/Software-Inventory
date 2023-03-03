@@ -253,9 +253,7 @@ class Licenses:
                     # asset is not found in computer_info from bigfix. Skip
                     continue
             print(asset)
-            print(seat)
-            print(count)
-            print('*********')
+            print('***')
             # IF SEAT IS NOT FOUND, CREATE SEAT
             # if there is no seat checked out, get all info
             # necessary to create a seat
@@ -307,11 +305,11 @@ class Licenses:
             if not snipe_seat:
                 print(seat)
                 print(count)
-                print('++++++++++++')
                 self.seats_add.append(seat)
                 logger.debug('check-out asset: {}, asset ID {}'
                              .format(seat['asset_name'],
                                      seat['assigned_asset']))
+                print('++++++++++++')
                 asset_count += 1
 
         total = self.lic_w_ct_col.find_one({'sw': license_name['sw']},
