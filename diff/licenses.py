@@ -206,13 +206,14 @@ class Licenses:
         # check if there is a seat already in snipeIT
         # if not, a new seat needs to be added
         asset_count = 0
-        for asset in bigfix_assets:
+        for count, asset in enumerate(bigfix_assets):
             seat = {'license_id': lic_id,
                     'assigned_asset': None,
                     'location': None,
                     'asset_name': asset['comp_name'],
                     'asset_tag': None,
-                    'license_name': license_name['sw']}
+                    'license_name': license_name['sw'],
+                    'count': count}
             # check if the seat already exists in snipeIT
             snipe_seat = self.snipe_seat_col.find_one(
                 {'license_id': lic_id,
@@ -251,7 +252,10 @@ class Licenses:
                 else:
                     # asset is not found in computer_info from bigfix. Skip
                     continue
-
+            print(asset)
+            print(seat)
+            count
+            print('*********')
             # IF SEAT IS NOT FOUND, CREATE SEAT
             # if there is no seat checked out, get all info
             # necessary to create a seat
