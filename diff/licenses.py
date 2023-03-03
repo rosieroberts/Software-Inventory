@@ -206,14 +206,13 @@ class Licenses:
         # check if there is a seat already in snipeIT
         # if not, a new seat needs to be added
         asset_count = 0
-        for count, asset in enumerate(bigfix_assets):
+        for asset in bigfix_assets:
             seat = {'license_id': lic_id,
                     'assigned_asset': None,
                     'location': None,
                     'asset_name': asset['comp_name'],
                     'asset_tag': None,
-                    'license_name': license_name['sw'],
-                    'count': count}
+                    'license_name': license_name['sw']}
             # check if the seat already exists in snipeIT
             snipe_seat = self.snipe_seat_col.find_one(
                 {'license_id': lic_id,
@@ -226,14 +225,11 @@ class Licenses:
             # sometimes it is different.
             # The hostname is not as up to date as bigfix
             else:
-                print('looking for seat')
                 # find mac address in bigfix computer info for the asset
                 mac_addr_bf = self.computer_info_col.find_one(
                     {'comp_name': seat['asset_name']},
                     {'_id': 0, 'mac_addr': 1})
                 if mac_addr_bf:
-                    print('mac_addr_bf')
-                    print(mac_addr_bf)
                     # the asset names may be different, get the asset name
                     # from snipe and then see if that asset name is in a seat
                     # already checked out, if not, move on to the next
@@ -241,8 +237,6 @@ class Licenses:
                         {'Mac Address': mac_addr_bf['mac_addr']},
                         {'_id': 0, 'Hostname': 1})
                     if snipe_asset_name:
-                        print('snipe_asset_name')
-                        print(snipe_asset_name)
                         # check if the seat already exists in snipeIT again
                         # using another hostname, because snipeIT may have a
                         # different hostname for that same asset
@@ -251,13 +245,10 @@ class Licenses:
                              'asset_name': snipe_asset_name['Hostname']})
                         if snipe_seat:
                             continue
-                        else:
-                            print('not snipe_seat')
                     else:
                         # mac address not found in snipeIT. Skip
                         continue
                 else:
-                    print(' not mac_addr_bf')
                     # asset is not found in computer_info from bigfix. Skip
                     continue
 
@@ -274,7 +265,6 @@ class Licenses:
                  'IP': 1,
                  'Mac Address': 1})
             if asset_info:
-                print('found asset information in snipe')
                 seat['location'] = asset_info['Location']
                 seat['asset_tag'] = asset_info['Asset Tag']
                 seat['assigned_asset'] = asset_info['ID']
@@ -288,7 +278,6 @@ class Licenses:
                      'mac_addr': 1,
                      'IP': 1})
                 if comp_info:
-                    print('mac address found in bigfix using computer name')
                     asset_info = self.snipe_hw_col.find_one(
                         {'Mac Address': comp_info['mac_addr']},
                         {'_id': 0,
@@ -297,7 +286,6 @@ class Licenses:
                          'Asset Tag': 1,
                          'Hostname': 1})
                     if asset_info:
-                        print('asset_info found in snipe using mac address')
                         seat['asset_name'] = asset_info['Hostname']
                         seat['location'] = asset_info['Location']
                         seat['asset_tag'] = asset_info['Asset Tag']
@@ -313,13 +301,10 @@ class Licenses:
                     continue
             # add new seat to upd_seat_add list
             if not snipe_seat:
-                print(seat)
-                print(count)
                 self.seats_add.append(seat)
                 logger.debug('check-out asset: {}, asset ID {}'
                              .format(seat['asset_name'],
                                      seat['assigned_asset']))
-                print('-------------------------------------------------------')
                 asset_count += 1
 
         total = self.lic_w_ct_col.find_one({'sw': license_name['sw']},
@@ -376,12 +361,10 @@ class Licenses:
         comp_names = [item['comp_name'] for item in comp_names]
         for seat in snipe_seats:
             if seat['asset_name'] not in comp_names:
-                print('REM- seat not in comp_names', seat['asset_name'])
                 mac_addr_snipe = self.snipe_hw_col.find_one(
                     {'ID': seat['assigned_asset']},
                     {'_id': 0, 'Mac Address': 1})
                 if mac_addr_snipe:
-                    print('REM- If mac_addr_snipe ', seat['asset_name'])
                     # the asset names may be different, get the asset name
                     # from bigfix and then see if that asset name is in
                     # the list of computers associated with this license
@@ -390,16 +373,13 @@ class Licenses:
                         {'mac_addr': mac_addr_snipe['Mac Address']},
                         {'_id': 0, 'comp_name': 1})
                     if computer_info_name:
-                        print(computer_info_name['comp_name'], 'REM - if computer_info_name', seat['asset_name'])
                         if computer_info_name['comp_name'] not in comp_names:
-                            print('REM - if computer in list of assets in lic in bigfix', seat['asset_name'])
                             self.seats_rem.append(seat)
                             logger.debug('check-in asset: {}, asset ID {}'
                                          .format(seat['asset_name'],
                                                  seat['assigned_asset']))
                             asset_ct += 1
                     else:
-                        print('REM no_computer_info_name', seat['asset_name'] )
                         self.seats_rem.append(seat)
                         logger.debug('check-in asset: {}, asset ID {}'
                                      .format(seat['asset_name'],
@@ -585,6 +565,7 @@ class Licenses:
 
         # execute the pipeline and print the results
         duplicates = self.snipe_seat_col.aggregate(pipeline)
+        logger.debug('List of duplicate seats')
         for seat in duplicates:
             print('Seats with license_id={}, asset_name={}, and asset_tag={}'
                   .format(seat['_id']['license_id'],
