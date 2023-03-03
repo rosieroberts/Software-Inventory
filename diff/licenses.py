@@ -291,6 +291,8 @@ class Licenses:
                                  'mac_addr': comp_info['mac_addr']}
                         assets_not_found.append(asset)
                         continue
+                else:
+                    continue
             # add new seat to upd_seat_add list
             if not snipe_seat:
                 self.seats_add.append(seat)

@@ -124,7 +124,6 @@ class Seats():
         if len(seats) == 0:
             print('NO SEATS TO CHECK OUT')
         ct = 0
-        print(seats)
         for seat in seats:
             print(seat)
             # get asset information
