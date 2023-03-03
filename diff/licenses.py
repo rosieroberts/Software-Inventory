@@ -254,7 +254,7 @@ class Licenses:
                     continue
             print(asset)
             print(seat)
-            count
+            print(count)
             print('*********')
             # IF SEAT IS NOT FOUND, CREATE SEAT
             # if there is no seat checked out, get all info
@@ -305,6 +305,9 @@ class Licenses:
                     continue
             # add new seat to upd_seat_add list
             if not snipe_seat:
+                print(seat)
+                print(count)
+                print('++++++++++++')
                 self.seats_add.append(seat)
                 logger.debug('check-out asset: {}, asset ID {}'
                              .format(seat['asset_name'],
