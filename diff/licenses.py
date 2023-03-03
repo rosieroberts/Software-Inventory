@@ -232,6 +232,7 @@ class Licenses:
                 if mac_addr_bf:
                     if mac_addr_bf['mac_addr'] != 'B8:85:84:B8:3F:6B':
                         continue
+                    print(mac_addr_bf)
                     # the asset names may be different, get the asset name
                     # from snipe and then see if that asset name is in a seat
                     # already checked out, if not, move on to the next
@@ -250,6 +251,7 @@ class Licenses:
                     else:
                         print('not snipe_asset_name')
                 else:
+                    print(asset)
                     print('not mac_addr_bf no mac found in computer info')
 
             # IF SEAT IS NOT FOUND, CREATE SEAT
