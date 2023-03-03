@@ -267,12 +267,14 @@ class Licenses:
                  'IP': 1,
                  'Mac Address': 1})
             if asset_info:
+                print(asset_info['Location'], asset_info['Asset Tag'], asset_info['ID'])
                 seat['location'] = asset_info['Location']
                 seat['asset_tag'] = asset_info['Asset Tag']
                 seat['assigned_asset'] = asset_info['ID']
             # if an asset was not found with the hostname in snipe_hw,
             # use the mac address
             else:
+                print('^^^')
                 # get mac addr from bigfix
                 comp_info = self.computer_info_col.find_one(
                     {'comp_name': asset['comp_name']},
@@ -280,6 +282,8 @@ class Licenses:
                      'mac_addr': 1,
                      'IP': 1})
                 if comp_info:
+                    print('comp_info')
+                    print(comp_info['mac_addr'], comp_info['IP'])
                     asset_info = self.snipe_hw_col.find_one(
                         {'Mac Address': comp_info['mac_addr']},
                         {'_id': 0,
@@ -288,18 +292,22 @@ class Licenses:
                          'Asset Tag': 1,
                          'Hostname': 1})
                     if asset_info:
+                        print('asset_info')
+                        print(asset_info['ID'], asset_info['Location'], asset_info['Location'], asset_info['Asset Tag'], asset_info['ID'])
                         seat['asset_name'] = asset_info['Hostname']
                         seat['location'] = asset_info['Location']
                         seat['asset_tag'] = asset_info['Asset Tag']
                         seat['assigned_asset'] = asset_info['ID']
                     # asset not found in snipeIT, add to list to review
                     else:
+                        print('---')
                         asset = {'name': asset['comp_name'],
                                  'IP': comp_info['IP'],
                                  'mac_addr': comp_info['mac_addr']}
                         assets_not_found.append(asset)
                         continue
                 else:
+                    print('jjjjjj')
                     continue
             # add new seat to upd_seat_add list
             if not snipe_seat:
