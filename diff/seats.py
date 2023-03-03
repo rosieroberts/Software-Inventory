@@ -142,7 +142,7 @@ class Seats():
                 logger.debug('error, there are no empty seats left. '
                              'cannot check out {} seats. Check license {}'
                              .format(len(seats), seat['license_id']))
-                return
+                break
             license_id = seat['license_id']
             seat_id = empty_seat['id']
             asset_id = seat['assigned_asset']
