@@ -125,6 +125,7 @@ class Seats():
             print('NO SEATS TO CHECK OUT')
         ct = 0
         for seat in seats:
+            print('CHECK OUT SEAT')
             print(seat)
             # get asset information
             asset_info = self.snipe_hw_col.find_one(

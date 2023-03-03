@@ -302,8 +302,9 @@ class Licenses:
             # add new seat to upd_seat_add list
             if not snipe_seat:
                 self.seats_add.append(seat)
-                logger.debug('check-out asset: {}, asset ID {}'
-                             .format(seat['asset_name'],
+                logger.debug('License {} - Found check-out asset: {}, asset ID {}'
+                             .format(lic_id,
+                                     seat['asset_name'],
                                      seat['assigned_asset']))
                 asset_count += 1
 

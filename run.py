@@ -89,6 +89,8 @@ def run(args):
                 {'sw': item})
             lic_obj.get_lic_seats_rem(license_args)
             lic_obj.get_lic_seats_add(license_args)
+            lic_obj.seats_add.clear()
+            lic_obj.seats_rem.clear()
         sys.exit()
 
     # UPDATE WITH LICENSE ARGS
@@ -108,15 +110,21 @@ def run(args):
             for license in lic_obj.lic_arguments:
                 logger.debug('\n\n---------------------{}----------------------'
                              .format(license['sw']))
+                print(lic_obj.seats_rem)
                 lic_obj.get_lic_seats_rem(license)
                 seat_obj.check_in(lic_obj.seats_rem)
+                print(license)
                 lic_obj.get_lic_seats_add(license)
+                print(lic_obj.seats_add[0])
                 seat_obj.check_out(lic_obj.seats_add)
+                lic_obj.seats_add.clear()
+                lic_obj.seats_rem.clear()
                 # if the license needs to be deleted
                 if license in lic_obj.del_licenses:
                     lic_obj.get_lic_seats_del(license)
                     seat_obj.check_in(lic_obj.seats_rem)
-                    # lic_obj.delete_license(license)
+                    lic_obj.delete_license(license)
+                    lic_obj.seats_rem.clear()
         sys.exit()
 
     # get lists of licenses from bigfix and snipe
@@ -131,13 +139,15 @@ def run(args):
         # get all seat information for new licenses
         lic_obj.get_lic_seats_new(license)
         seat_obj.check_out(lic_obj.seats_add)
+        lic_obj.seats_add.clear()
 
     # DELETE
     lic_obj.get_licenses_delete(lic_obj.lic_arguments)
     for license in lic_obj.del_licenses:
         lic_obj.get_lic_seats_del(license)
         seat_obj.check_in(lic_obj.seats_rem)
-        # lic_obj.delete_license(license)
+        lic_obj.delete_license(license)
+        lic_obj.seats_rem.clear()
 
     # UPDATE
     upd_lic_ct = 0
@@ -148,7 +158,7 @@ def run(args):
     for upd_lic in lic_obj.upd_licenses:
         # add sleep to prevent API errors
         if upd_lic_ct == 118:
-            sleep(60)
+            sleep(61)
             upd_lic_ct = 0
         # updating licenses with the right numbers
         lic_obj.update_license(upd_lic)
@@ -160,6 +170,8 @@ def run(args):
         seat_obj.check_in(lic_obj.seats_rem)
         lic_obj.get_lic_seats_add(license)
         seat_obj.check_out(lic_obj.seats_add)
+        lic_obj.seats_add.clear()
+        lic_obj.seats_rem.clear()
 
 
 if __name__ == '__main__':
