@@ -230,9 +230,6 @@ class Licenses:
                     {'comp_name': seat['asset_name']},
                     {'_id': 0, 'mac_addr': 1})
                 if mac_addr_bf:
-                    if mac_addr_bf['mac_addr'] != 'B8:85:84:B8:3F:6B':
-                        continue
-                    print(mac_addr_bf)
                     # the asset names may be different, get the asset name
                     # from snipe and then see if that asset name is in a seat
                     # already checked out, if not, move on to the next
@@ -249,10 +246,11 @@ class Licenses:
                         if snipe_seat:
                             continue
                     else:
-                        print('not snipe_asset_name')
+                        # mac address not found in snipeIT. Skip
+                        continue
                 else:
-                    print(asset)
-                    print('not mac_addr_bf no mac found in computer info')
+                    # asset is not found in computer_info from bigfix. Skip
+                    continue
 
             # IF SEAT IS NOT FOUND, CREATE SEAT
             # if there is no seat checked out, get all info
