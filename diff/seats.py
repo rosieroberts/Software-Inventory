@@ -44,31 +44,21 @@ class Seats():
     # snipe hw collection (computers only col in software_inventory db)
     snipe_hw_col = software_db['snipe_hw']
 
-    def __init__(self) -> None:
-        # lists dictionaries of seats to check in or check out
-        # dictionaries contain asset_id and license_id
-        self.seat_check_in = []
-        self.seat_check_out = []
-
-    def get_seat_changes(self):
-        # get dictionaries of seats that need to be checked in
-        # get dictionaries of seats that need to be checked out
-        pass
-
-    def check_in(self):
+    def check_in(self, seats):
         # method for checking seats in
-        if len(self.seat_check_in) == 0:
-            return None
+        if len(seats) == 0:
+            print('NO SEATS TO CHECK IN')
         ct = 0
-        for seat in self.seat_check_in:
+        for seat in seats:
             # for each seat checked out to asset
             license_id = seat['license_id']
             seat_id = seat['id']
-            asset_id = seat['asset_id']
-            print(license_id, seat_id, asset_id)
+            asset_id = seat['assigned_asset']
+            logger.debug('CHECKING IN - license {}, seat {}, asset {}'
+                         .format(license_id, seat_id, asset_id))
             # to prevent API errors
-            if ct == 110:
-                sleep(60)
+            if ct == 118:
+                sleep(61)
                 ct = 0
             url = cfg.api_url_software_seat.format(license_id, seat_id)
             item_str = str({'asset_id': ''})
@@ -77,29 +67,32 @@ class Seats():
                                         url=url,
                                         data=payload,
                                         headers=cfg.api_headers)
-            logger.debug(pformat(response.text))
             status_code = response.status_code
             ct += 1
-            if status_code != 200:
-                logger.debug('error, there was something wrong removing '
-                             'license {} from asset {}'
-                             .format(license_id,
-                                     asset_id))
-                continue
             content = response.json()
-            status = str(content['status'])
-            print(status)  # remove this line later
-            if status != 'success':
-                logger.debug('error, license {} removal not successful '
-                             'for asset {}'
-                             .format(license_id, asset_id))
+            if status_code != 200:
                 message = str(content['messages'])
-                if message == 'Target not found':
-                    logger.debug('error, asset {} is not currently active, '
-                                 'cannot update license. Asset needs to be '
-                                 'restored in SnipeIT first.'
+                if message == 'Too many requests':
+                    logger.debug(message)
+                else:
+                    logger.debug('error, there was something wrong removing '
+                                 'seat to license {} to asset {}'
+                                 .format(license_id,
+                                         asset_id))
+                    logger.debug(pformat(response.text))
+                continue
+            status = str(content['status'])
+            if status != 'success':
+                message = str(content['messages'])
+                if message == 'Seat not found':
+                    logger.debug('error, seat id {} does no exist in snipeIT. '
+                                 'run snipe_li_update.py to update db first.'
                                  .format(asset_id))
-                    self.not_added.append(asset_id)
+                else:
+                    logger.debug('error, license {} removal not successful '
+                                 'for asset {}'
+                                 .format(license_id, asset_id))
+                    logger.debug(pformat(response.text))
                 continue
             # updating seat in Mongo snipe_seat collection
             seat_upd = self.snipe_seat_col.update_one(
@@ -108,37 +101,57 @@ class Seats():
                 {'$set': {'assigned_asset': None,
                           'asset_name': None,
                           'location': None,
-                          'asset_tag': None}})
+                          'asset_tag': None,
+                          'date': today_date}})
             if seat_upd is False:
                 logger.debug('error, could not update snipe_seat collection '
                              'for license {} and asset {}'
                              .format(license_id, asset_id))
+            free_seats = self.snipe_lic_col.find_one(
+                {'License ID': license_id}, {'_id': 0, 'Free Seats': 1})
             # updating license in Mongo snipe_lic collection
             lic_upd = self.snipe_lic_col.update_one(
                 {'License ID': license_id},
                 {'$set':
-                    {'Free Seats': int(self.snipe_lic_col['Free Seats']) + 1}})
+                    {'Free Seats': int(free_seats['Free Seats']) + 1}})
             if lic_upd is False:
                 logger.debug('error, could not update snipe_lic collection '
                              'for license {}'
                              .format(license_id))
 
-    def check_out(self):
+    def check_out(self, seats):
         # method for checking seats out
-        if len(self.seat_check_out) == 0:
-            return None
+        if len(seats) == 0:
+            print('NO SEATS TO CHECK OUT')
         ct = 0
-        for seat in self.seat_check_out:
+        for seat in seats:
+            print('CHECK OUT SEAT')
+            print(seat)
             # get asset information
-            asset_info = self.snipe_hw_col.find_one({'ID': seat['asset_id']})
-            # for each seat checked out to asset
+            asset_info = self.snipe_hw_col.find_one(
+                {'ID': seat['assigned_asset']})
+            # find an unassigned seat to check out asset
+            empty_seat = self.snipe_seat_col.find_one(
+                {'assigned_asset': None,
+                 'license_id': seat['license_id']},
+                {'id': 1,
+                 'assigned_asset': 1,
+                 'name': 1,
+                 'location': 1,
+                 '_id': 0})
+            if not empty_seat:
+                logger.debug('error, there are no empty seats left. '
+                             'cannot check out {} seats. Check license {}'
+                             .format(len(seats), seat['license_id']))
+                break
             license_id = seat['license_id']
-            seat_id = seat['id']
-            asset_id = seat['asset_id']
-            print(license_id, seat_id, asset_id)
+            seat_id = empty_seat['id']
+            asset_id = seat['assigned_asset']
+            logger.debug('CHECKING OUT - license {}, seat {}, asset {}'
+                         .format(license_id, seat_id, asset_id))
             # to prevent API errors
-            if ct == 110:
-                sleep(60)
+            if ct == 118:
+                sleep(61)
                 ct = 0
             url = cfg.api_url_software_seat.format(license_id, seat_id)
             item_str = str({'asset_id': asset_id})
@@ -147,29 +160,32 @@ class Seats():
                                         url=url,
                                         data=payload,
                                         headers=cfg.api_headers)
-            logger.debug(pformat(response.text))
             status_code = response.status_code
+            content = response.json()
             ct += 1
             if status_code != 200:
-                logger.debug('error, there was something wrong adding seat '
-                             'for license {} to asset {}'
-                             .format(license_id,
-                                     asset_id))
-                continue
-            content = response.json()
-            status = str(content['status'])
-            print(status)  # remove this line later
-            if status != 'success':
-                logger.debug('error, license {} check-out not successful '
-                             'for asset {}'
-                             .format(license_id, asset_id))
                 message = str(content['messages'])
-                if message == 'Target not found':
-                    logger.debug('error, asset {} is not currently active, '
-                                 'cannot update license. Asset needs to be '
-                                 'restored in SnipeIT first.'
+                if message == 'Too many requests':
+                    logger.debug(message)
+                else:
+                    logger.debug('error, there was something wrong adding seat '
+                                 'for license {} to asset {}'
+                                 .format(license_id,
+                                         asset_id))
+                    logger.debug(pformat(response.text))
+                continue
+            status = str(content['status'])
+            if status != 'success':
+                message = str(content['messages'])
+                if message == 'Seat not found':
+                    logger.debug('error, seat id {} does not exist in snipeIT. '
+                                 'run snipe_lic_update.py to update db first.'
                                  .format(asset_id))
-                    self.not_added.append(asset_id)
+                else:
+                    logger.debug('error, license {} check-out not successful '
+                                 'for asset {}'
+                                 .format(license_id, asset_id))
+                    logger.debug(pformat(response.text))
                 continue
             # updating seat in Mongo snipe_seat collection
             seat_upd = self.snipe_seat_col.update_one(
@@ -183,11 +199,13 @@ class Seats():
                 logger.debug('error, could not update snipe_seat collection '
                              'for license {} and asset {}'
                              .format(license_id, asset_id))
+            free_seats = self.snipe_lic_col.find_one(
+                {'License ID': license_id}, {'_id': 0, 'Free Seats': 1})
             # updating license in Mongo snipe_lic collection
             lic_upd = self.snipe_lic_col.update_one(
                 {'License ID': license_id},
                 {'$set':
-                    {'Free Seats': int(self.snipe_lic_col['Free Seats']) - 1}})
+                    {'Free Seats': int(free_seats['Free Seats']) - 1}})
             if lic_upd is False:
                 logger.debug('error, could not update snipe_lic collection '
                              'for license {}'
